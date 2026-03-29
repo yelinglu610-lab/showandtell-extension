@@ -82,45 +82,51 @@
   }
   function sep(){ const d=document.createElement("div"); d.style.cssText="width:1px;height:20px;background:rgba(255,255,255,.08);margin:0 4px;flex-shrink:0;"; return d }
 
-  const IC={
-    // 摄像头：简洁圆角矩形+镜头圆
-    cam:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5A2.5 2.5 0 014.5 6h1.67L8 3.5h8L17.83 6H19.5A2.5 2.5 0 0122 8.5v9A2.5 2.5 0 0119.5 20h-15A2.5 2.5 0 012 17.5v-9z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
-    // 鼠标：干净鼠标外形
-    mouse: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.69 2 6 4.69 6 8v8c0 3.31 2.69 6 6 6s6-2.69 6-6V8c0-3.31-2.69-6-6-6z"/><line x1="12" y1="7" x2="12" y2="11"/></svg>`,
-    // 激光笔：光线射出效果
-    laser: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l6-6"/><path d="M10.5 13.5L18 4"/><circle cx="5.5" cy="18.5" r="2" fill="#FF3B30" stroke="none"/><path d="M20 2l2 2M17 3l1.5 1.5M21 5l-1.5 1.5"/></svg>`,
-    // 停止：圆角方块
-    stop:  `<svg width="15" height="15" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="#fff"/></svg>`,
-    // 关闭
-    close: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+  // 文字+图标按钮
+  function mkLabelBtn(icon, label, tip) {
+    const b = document.createElement("button"); b.title=tip
+    b.style.cssText="height:38px;padding:0 14px;border-radius:12px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s,outline .15s;"
+    b.innerHTML=`${icon}<span style="font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;">${label}</span>`
+    b.onmouseenter=()=>{ if(!b._on) b.style.background="rgba(255,255,255,.08)" }
+    b.onmouseleave=()=>{ if(!b._on) b.style.background="transparent" }
+    return b
   }
 
-  const bCam   = mkBtn(IC.cam,   "摄像头 C")
-  const bMouse = mkBtn(IC.mouse, "鼠标 M")
-  const bLaser = mkBtn(IC.laser, "激光笔 L")
+  // 图标 SVG（更大更清晰）
+  const camSvg   = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>`
+  const mouseSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="16" rx="5"/><line x1="12" y1="6" x2="12" y2="10"/></svg>`
+  const laserSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="3" fill="#FF3B30" stroke="none"/><line x1="8.5" y1="15.5" x2="20" y2="4"/><line x1="21" y1="3" x2="22" y2="2"/></svg>`
+  const closeSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`
 
-  const cdot = document.createElement("div")
-  cdot.style.cssText=`width:16px;height:16px;border-radius:50%;background:${laserColor};border:2px solid rgba(255,255,255,.3);cursor:pointer;flex-shrink:0;margin-left:2px;transition:transform .15s;`
-  cdot.title="激光颜色"
-  cdot.onmouseenter=()=>cdot.style.transform="scale(1.2)"
-  cdot.onmouseleave=()=>cdot.style.transform="scale(1)"
+  const bCam   = mkLabelBtn(camSvg,   "摄像头", "摄像头 C")
+  const bMouse = mkLabelBtn(mouseSvg, "鼠标",   "鼠标模式 M")
+  const bLaser = mkLabelBtn(laserSvg, "激光笔", "激光笔 L")
 
-  // 录制按钮：红点 + "录制"文字
+  // 颜色按钮（文字+色块）
+  const bColor = document.createElement("button")
+  bColor.title="选择颜色"
+  bColor.style.cssText="height:38px;padding:0 12px;border-radius:12px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s;"
+  bColor.innerHTML=`<div id="sat-cdot" style="width:14px;height:14px;border-radius:50%;background:${laserColor};border:2px solid rgba(255,255,255,.4);flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:#fff;">颜色</span>`
+  bColor.onmouseenter=()=>bColor.style.background="rgba(255,255,255,.08)"
+  bColor.onmouseleave=()=>bColor.style.background="transparent"
+  const cdot = bColor.querySelector("#sat-cdot")
+
+  // 录制按钮
   const bRec = document.createElement("button")
   bRec.title="录制 R"
-  bRec.style.cssText="height:36px;padding:0 12px;border-radius:12px;border:none;background:rgba(255,59,48,.15);cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s;"
-  bRec.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FF3B30"/></svg><span style="font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;">录制</span>`
-  bRec.onmouseenter=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.25)" }
+  bRec.style.cssText="height:38px;padding:0 14px;border-radius:12px;border:none;background:rgba(255,59,48,.15);cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:all .15s;"
+  bRec.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FF3B30"/></svg><span style="font-size:13px;font-weight:600;color:#fff;">录制</span>`
+  bRec.onmouseenter=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.28)" }
   bRec.onmouseleave=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.15)" }
 
   const timerEl = document.createElement("div")
-  timerEl.style.cssText="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);font-variant-numeric:tabular-nums;letter-spacing:.5px;min-width:34px;text-align:center;"
+  timerEl.style.cssText="font-size:12px;font-weight:700;color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums;letter-spacing:.5px;min-width:34px;text-align:center;"
   timerEl.textContent="00:00"
 
-  const bClose = mkBtn(IC.close, "关闭 Esc")
+  const bClose = mkBtn(closeSvg, "关闭 Esc")
 
-  bar.append(bCam, sep(), bMouse, bLaser, cdot, sep(), bRec, timerEl, sep(), bClose)
-  glow(bMouse,true)
+  bar.append(bCam, sep(), bMouse, bLaser, bColor, sep(), bRec, timerEl, sep(), bClose)
+  glow(bMouse, true)
 
   // ── 颜色面板 ──────────────────────────────────────────
   const cpanel=document.createElement("div")
@@ -257,12 +263,12 @@
   bCam.onclick   = ()=> camOn ? stopCam() : startCam()
   bMouse.onclick = ()=> setLaser(false)
   bLaser.onclick = ()=> setLaser(!laserOn)
-  cdot.onclick   = e=>{ e.stopPropagation(); cpShown=!cpShown; cpanel.style.display=cpShown?"flex":"none" }
+  bColor.onclick = e=>{ e.stopPropagation(); cpShown=!cpShown; cpanel.style.display=cpShown?"flex":"none" }
   bRec.onclick   = ()=> recOn ? stopRec() : startRec()
   bClose.onclick = ()=> hideAll()
 
   document.addEventListener("click",e=>{
-    if(!cpanel.contains(e.target)&&e.target!==cdot) hideCp()
+    if(!cpanel.contains(e.target)&&!bColor.contains(e.target)) hideCp()
   })
   document.addEventListener("keydown",e=>{
     if(!shown||["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return
