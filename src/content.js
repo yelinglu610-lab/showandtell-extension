@@ -33,8 +33,15 @@
   let isDragging=false, isResizing=false, dragOffset={x:0,y:0}, resizeStart={}
 
   function applyShape(){
-    const r={rounded:"20px",circle:"50%",square:"6px"}[camShape]||"20px"
-    bubble.style.borderRadius=r
+    if(camShape==="circle"){
+      // 正圆：取宽高最小值，强制正方形
+      const d=Math.min(camSize.w,camSize.h)
+      camSize.w=d; camSize.h=d
+      bubble.style.width=d+"px"; bubble.style.height=d+"px"
+      bubble.style.borderRadius="50%"
+    } else {
+      bubble.style.borderRadius={rounded:"20px",square:"6px"}[camShape]||"20px"
+    }
   }
   function updateBubble(){
     bubble.style.left=camPos.x+"px"; bubble.style.top=camPos.y+"px"
