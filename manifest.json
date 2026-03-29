@@ -19,6 +19,5 @@
   "web_accessible_resources": [{
     "resources": ["src/content.css", "src/content.js"],
     "matches": ["<all_urls>"]
-  }],
-  "offscreen": "offscreen.html"
+  }]
 }
