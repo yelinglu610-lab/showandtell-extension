@@ -72,57 +72,51 @@
   },{passive:false})
 
   // ── 工具栏 ──
-  const bar=document.createElement("div")
-  bar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
-  document.body.append(bar)
-
-  // 工具栏位置状态
+  // 用变量管理位置，不依赖 CSS transform
+  let barW = 0 // 工具栏宽度，渲染后获取
+  let barLeft = 0, barTop = 0 // 当前像素位置
   let barAnchored = "bottom"
   let barDrag = false, barOff = {x:0, y:0}
 
-  // 初始化为像素坐标（消除 transform）
-  requestAnimationFrame(()=>{
+  const bar=document.createElement("div")
+  bar.style.cssText="position:fixed;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
+  document.body.append(bar)
+
+  // 初始化位置（等 DOM 渲染完拿到真实宽度）
+  function initBarPos() {
     const r = bar.getBoundingClientRect()
-    bar.style.left = r.left + "px"
-    bar.style.top  = r.top  + "px"
-    bar.style.bottom = "auto"
-    bar.style.transform = "none"
-  })
+    barW = r.width
+    barLeft = Math.round((window.innerWidth - barW) / 2)
+    barTop  = Math.round(window.innerHeight - r.height - 24)
+    bar.style.left = barLeft + "px"
+    bar.style.top  = barTop  + "px"
+  }
+  requestAnimationFrame(initBarPos)
 
   bar.addEventListener("mousedown", e=>{
     if (e.target.closest("button") || e.target.closest("input")) return
-    // 每次拖动前从 DOM 取当前真实位置
-    const r = bar.getBoundingClientRect()
-    bar.style.left = r.left + "px"
-    bar.style.top  = r.top  + "px"
-    bar.style.bottom = "auto"
-    bar.style.transform = "none"
-    bar.style.transition = "none" // 拖动时禁止过渡，保证跟手即时
-    barOff = { x: e.clientX - r.left, y: e.clientY - r.top }
+    // 从变量直接用，不再读 DOM
     barDrag = true
+    barOff = { x: e.clientX - barLeft, y: e.clientY - barTop }
+    bar.style.transition = "none"
     bar.style.cursor = "grabbing"
     e.preventDefault()
   })
   window.addEventListener("mousemove", e=>{
     if (!barDrag) return
-    // 直接设置，不做任何处理，完全跟手
-    bar.style.left = (e.clientX - barOff.x) + "px"
-    bar.style.top  = (e.clientY - barOff.y) + "px"
+    barLeft = e.clientX - barOff.x
+    barTop  = e.clientY - barOff.y
+    bar.style.left = barLeft + "px"
+    bar.style.top  = barTop  + "px"
   })
   window.addEventListener("mouseup", ()=>{
     if (!barDrag) return
     barDrag = false
     bar.style.cursor = "grab"
-    // 松手后加轻微弹性，停在原地
-    bar.style.transition = "box-shadow .2s ease"
-    bar.style.boxShadow = "0 2px 0 1px rgba(0,0,0,.5),0 20px 60px rgba(0,0,0,.7)"
-    setTimeout(()=>{
-      bar.style.transition = ""
-      bar.style.boxShadow = ""
-    }, 200)
-    // 记录上下位置供收起用
+    bar.style.transition = ""
+    // 记录上下供收起用
     const r = bar.getBoundingClientRect()
-    barAnchored = (r.top + r.height / 2) < window.innerHeight / 2 ? "top" : "bottom"
+    barAnchored = (barTop + r.height/2) < window.innerHeight/2 ? "top" : "bottom"
   })
 
   // ── 收起条 ──
@@ -147,23 +141,25 @@
 
   colBar.onclick=()=>{
     colBar.style.display="none"
-    // 展开回底部居中
-    bar.style.left="50%"; bar.style.top="auto"
-    bar.style.bottom="24px"; bar.style.transform="translateX(-50%)"
-    bar.style.display="flex"
-    bar.style.opacity="0"
-    bar.style.transition="opacity .22s ease"
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      bar.style.opacity="1"
-      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" },240)
-    }))
     barAnchored="bottom"
-    // 重新初始化拖动坐标
-    requestAnimationFrame(()=>{
-      const r=bar.getBoundingClientRect()
-      bar.style.left=r.left+"px"; bar.style.top=r.top+"px"
-      bar.style.bottom="auto"; bar.style.transform="none"
-    })
+    // 回到底部居中
+    const r=bar.getBoundingClientRect()
+    barLeft = Math.round((window.innerWidth - r.width) / 2)
+    barTop  = Math.round(window.innerHeight - r.height - 24)
+    bar.style.left = barLeft + "px"
+    bar.style.top  = barTop + "px"
+    // 从对应边滑入
+    const fromY = barAnchored==="top" ? "-130%" : "130%"
+    bar.style.transform = `translateY(${fromY})`
+    bar.style.opacity = "0"
+    bar.style.display = "flex"
+    bar.style.transition = "none"
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      bar.style.transition = "transform .22s cubic-bezier(.34,1.4,.64,1), opacity .18s"
+      bar.style.transform = "none"
+      bar.style.opacity = "1"
+      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" }, 240)
+    }))
   }
 
   // ── 按钮工厂 ──
@@ -218,29 +214,26 @@
 
   // ── 收起/展开 ──
   bToggle.onclick=()=>{
-    // 收起时：吸到最近边，然后滑出
     const r = bar.getBoundingClientRect()
     const isTop = barAnchored === "top"
-    // 先把 bar 吸到对应边（无动画）
-    if (isTop) {
-      bar.style.top = "16px"; bar.style.bottom = "auto"
-    } else {
-      bar.style.top = (window.innerHeight - r.height - 16) + "px"; bar.style.bottom = "auto"
-    }
-    // 再滑出
-    bar.style.transition = "transform .2s ease, opacity .18s"
+    // step1: 瞬间移到对应边（无动画）
+    barTop = isTop ? 16 : window.innerHeight - r.height - 16
+    bar.style.transition = "none"
+    bar.style.top = barTop + "px"
+    // step2: 下一帧启动滑出动画
     requestAnimationFrame(()=>{
-      bar.style.transform = isTop ? "translateY(-120%)" : "translateY(120%)"
+      bar.style.transition = "transform .22s ease, opacity .18s"
+      bar.style.transform = isTop ? "translateY(-130%)" : "translateY(130%)"
       bar.style.opacity = "0"
     })
     setTimeout(()=>{
       bar.style.display = "none"
-      bar.style.transform = "none"; bar.style.opacity = ""
+      bar.style.transform = "none"
+      bar.style.opacity = ""
       bar.style.transition = ""
-      // 收起条位置
       snapColBar()
       colBar.style.display = "flex"
-    }, 210)
+    }, 230)
   }
 
   // ── 颜色面板 ──
