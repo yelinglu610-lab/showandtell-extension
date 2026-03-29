@@ -353,7 +353,6 @@
   bLaser.onclick = ()=> setLaser(!laserOn)
   bColor.onclick = e=>{ e.stopPropagation(); cpShown=!cpShown; cpanel.style.display=cpShown?"flex":"none" }
   bRec.onclick   = ()=> recOn?stopRec():startRec()
-  bToggle.onclick= ()=>{ bar.style.display="none"; colBar.style.display="flex" }
   bClose.onclick = ()=> hideAll()
 
   document.addEventListener("click",e=>{
