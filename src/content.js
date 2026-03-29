@@ -196,7 +196,7 @@
   const img=(code,size=20)=>`<img src="${TW}/${code}.svg" width="${size}" height="${size}" style="display:block;flex-shrink:0;">`
 
   // ── 按钮 ──
-  const bCam   = mkBtn(img("1f4f7")+"摄像头", "摄像头 C")
+  const bCam   = mkBtn(img("1f4f7")+'<span id="sat-cam-lbl">摄像头</span>', "摄像头 C")
   const bShape = mkBtn("···", "摄像框形状")
   bShape.style.padding="0 8px"; bShape.style.fontSize="16px"; bShape.style.letterSpacing="1px"
 
@@ -325,29 +325,57 @@
   function stopLaserRaf(){ if(raf){cancelAnimationFrame(raf);raf=null}; lx.clearRect(0,0,lc.width,lc.height); trail=[] }
 
   // ── 摄像头 ──
+  function setCamState(on){
+    camOn=on
+    const i=bCam.querySelector("img")
+    if(on){
+      i.style.opacity="1"; i.style.filter=""
+      bCam.style.background="rgba(255,214,0,.18)"
+      bCam.style.outline="1.5px solid rgba(255,214,0,.55)"
+      bCam._on=true
+    } else {
+      i.style.opacity=".35"; i.style.filter="grayscale(1)"
+      bCam.style.background="transparent"
+      bCam.style.outline="none"
+      bCam._on=false
+    }
+  }
   async function startCam(){
     try{
       camStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})
       vid.srcObject=camStream; updateBubble(); bubble.style.display="block"
-      camOn=true; setOn(bCam,true)
+      setCamState(true)
     }catch(e){ alert("摄像头失败："+e.message) }
   }
   function stopCam(){
     if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
-    bubble.style.display="none"; camOn=false; setOn(bCam,false)
+    bubble.style.display="none"; setCamState(false)
   }
 
   // ── 麦克风 ──
-  async function toggleMic(){
+  function setMicState(on){
+    micOn=on
     const svg=bMic.querySelector("svg")
+    if(on){
+      svg.style.opacity="1"; svg.style.filter=""
+      bMic.style.background="rgba(255,214,0,.18)"
+      bMic.style.outline="1.5px solid rgba(255,214,0,.55)"
+      bMic._on=true
+    } else {
+      svg.style.opacity=".3"; svg.style.filter="grayscale(1)"
+      bMic.style.background="transparent"
+      bMic.style.outline="none"
+      bMic._on=false
+    }
+  }
+  async function toggleMic(){
     if(micOn){
       if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
-      micOn=false; setOn(bMic,false)
-      svg.style.opacity=".4"
+      setMicState(false)
     } else {
       try{
         micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false})
-        micOn=true; setOn(bMic,true); svg.style.opacity="1"
+        setMicState(true)
       }catch(e){ alert("麦克风失败："+e.message) }
     }
   }
