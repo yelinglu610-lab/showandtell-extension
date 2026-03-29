@@ -97,7 +97,7 @@
     bar.style.top  = r.top  + "px"
     bar.style.bottom = "auto"
     bar.style.transform = "none"
-    bar.style.transition = "none" // 拖动时禁止任何过渡
+    bar.style.transition = "none" // 拖动时禁止过渡，保证跟手即时
     barOff = { x: e.clientX - r.left, y: e.clientY - r.top }
     barDrag = true
     bar.style.cursor = "grabbing"
@@ -113,8 +113,14 @@
     if (!barDrag) return
     barDrag = false
     bar.style.cursor = "grab"
-    bar.style.transition = "" // 恢复默认
-    // 松手停在原地，记录上下位置供收起用
+    // 松手后加轻微弹性，停在原地
+    bar.style.transition = "box-shadow .2s ease"
+    bar.style.boxShadow = "0 2px 0 1px rgba(0,0,0,.5),0 20px 60px rgba(0,0,0,.7)"
+    setTimeout(()=>{
+      bar.style.transition = ""
+      bar.style.boxShadow = ""
+    }, 200)
+    // 记录上下位置供收起用
     const r = bar.getBoundingClientRect()
     barAnchored = (r.top + r.height / 2) < window.innerHeight / 2 ? "top" : "bottom"
   })
@@ -147,10 +153,12 @@
     bar.style.bottom="24px"; bar.style.transform="translateX(-50%)"
     bar.style.display="flex"
     bar.style.opacity="0"
-    bar.style.transition="opacity .2s"
+    bar.style.transform="translateY(20px) scale(0.96)"
+    bar.style.transition="opacity .22s ease, transform .22s cubic-bezier(.34,1.56,.64,1)"
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       bar.style.opacity="1"
-      setTimeout(()=>bar.style.transition="",220)
+      bar.style.transform="none"
+      setTimeout(()=>bar.style.transition="",240)
     }))
     barAnchored="bottom"
   }
