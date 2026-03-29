@@ -76,6 +76,11 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     return true
   }
 
+  // 用户主动关闭工具栏，不再自动注入
+  if (msg.type === "SAT_CLOSED") {
+    if (sender.tab) activatedTabs.delete(sender.tab.id)
+  }
+
   // 来自 offscreen
   if (msg.type === "REC_TICK") {
     recSecs = msg.secs
