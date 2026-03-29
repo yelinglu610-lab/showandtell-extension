@@ -25,7 +25,6 @@
   /* ── 工具栏 ── */
   #bar {
     display:flex; align-items:center; gap:2px; padding:6px 10px;
-    pointer-events:none; /* 让拖动穿透到 shell */
   }
 
   /* ── 收起条（展示时） ── */
@@ -47,13 +46,13 @@
   button:hover { background:rgba(255,255,255,.09); }
   button.on { background:rgba(255,214,0,.18); outline:1.5px solid rgba(255,214,0,.55); }
   button img { display:block; flex-shrink:0; pointer-events:none; }
-  .sep { pointer-events:none; width:1px; height:20px; background:rgba(255,255,255,.08); margin:0 3px; flex-shrink:0; }
+  .sep { width:1px; height:20px; background:rgba(255,255,255,.08); margin:0 3px; flex-shrink:0; }
 
   #bRec { background:rgba(255,59,48,.15); }
   #bRec:hover { background:rgba(255,59,48,.28); }
   #bRec.rec { background:rgba(255,59,48,.9); }
 
-  #timer { pointer-events:none; font-size:12px; font-weight:700; color:rgba(255,255,255,.7);
+  #timer { font-size:12px; font-weight:700; color:rgba(255,255,255,.7);
     font-variant-numeric:tabular-nums; letter-spacing:.5px; min-width:32px; text-align:center; }
   #timer.active { color:#FF3B30; }
 
