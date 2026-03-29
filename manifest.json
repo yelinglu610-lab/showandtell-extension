@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "ShowAndTell",
-  "version": "2.0.0",
-  "description": "激光笔 · 摄像头 · 录制 · 任意网页",
-  "permissions": ["activeTab", "scripting"],
+  "version": "2.1.0",
+  "description": "激光笔 · 摄像头 · 录制 · 悬浮工具栏",
+  "permissions": ["activeTab", "scripting", "tabs", "windows"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_icon": {
@@ -15,5 +15,9 @@
   },
   "background": {
     "service_worker": "src/background.js"
-  }
+  },
+  "web_accessible_resources": [{
+    "resources": ["toolbar.html", "src/content.css", "src/content.js"],
+    "matches": ["<all_urls>"]
+  }]
 }
