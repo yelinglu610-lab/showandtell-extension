@@ -313,7 +313,7 @@
   // ── 摄像头 ──
   async function startCam(){
     try{
-      camStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false})
+      camStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})
       vid.srcObject=camStream; updateBubble(); bubble.style.display="block"
       camOn=true; setOn(bCam,true)
     }catch(e){ alert("摄像头失败："+e.message) }
