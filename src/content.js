@@ -3,215 +3,203 @@
 
   let laserOn=false, drawing=false, trail=[], raf=null
   let recOn=false, recSecs=0, recTimer=null, recorder=null, chunks=[]
-  let camOn=false, camStream=null
+  let camOn=false, camStream=null, camShape="rounded"
   let laserColor="#FF3B30", laserW=5
-  let shown=true, cpShown=false
+  let shown=true, cpShown=false, spShown=false
+  let micOn=false, micStream=null
 
   const COLORS=["#FF3B30","#FF9500","#FFD600","#34C759","#007AFF","#5856D6","#fff","#111"]
+  const SHAPES=[{id:"rounded",label:"圆角"},{id:"circle",label:"圆形"},{id:"square",label:"方形"}]
 
-  // ── 激光 canvas ───────────────────────────────────────
+  // ── 激光 canvas ──
   const lc=document.createElement("canvas")
   lc.style.cssText="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2147483640;pointer-events:none;"
   lc.width=innerWidth; lc.height=innerHeight
   document.body.append(lc)
   const lx=lc.getContext("2d")
 
-  // ── 摄像气泡 ──────────────────────────────────────────
+  // ── 摄像气泡 ──
   const bubble=document.createElement("div")
-  bubble.style.cssText="position:fixed;right:28px;bottom:96px;width:200px;height:150px;border-radius:16px;overflow:hidden;box-shadow:0 0 0 3px #fff,0 8px 32px rgba(0,0,0,.4);cursor:grab;z-index:2147483644;background:#000;display:none;pointer-events:all;"
+  bubble.style.cssText="position:fixed;right:24px;top:80px;width:200px;height:150px;border-radius:20px;overflow:hidden;box-shadow:0 0 0 3px #fff,0 8px 32px rgba(0,0,0,.4);cursor:grab;z-index:2147483644;background:#000;display:none;pointer-events:all;"
   const vid=document.createElement("video")
   vid.autoplay=vid.muted=vid.playsInline=true
   vid.style.cssText="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;pointer-events:none;"
-  // 形状切换按钮（圆形/圆角/方形）
-  const shapeBtn=document.createElement("div")
-  shapeBtn.style.cssText="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border-radius:8px;padding:3px 6px;cursor:pointer;z-index:10;display:flex;gap:4px;pointer-events:all;"
-  const SHAPES=["circle","rounded","square"]
-  const SHAPE_LABELS=["⬤","▢","■"]
-  let camShape="rounded"
-  SHAPES.forEach((s,i)=>{
-    const b=document.createElement("span")
-    b.textContent=SHAPE_LABELS[i]
-    b.style.cssText=`font-size:11px;color:${s===camShape?"#FFD600":"rgba(255,255,255,.5)"};cursor:pointer;transition:color .15s;`
-    b.onclick=e=>{
-      e.stopPropagation(); camShape=s
-      shapeBtn.querySelectorAll("span").forEach((sp,j)=>sp.style.color=SHAPES[j]===s?"#FFD600":"rgba(255,255,255,.5)")
-      applyShape()
-    }
-    shapeBtn.append(b)
-  })
-
   const rh=document.createElement("div")
-  rh.style.cssText="position:absolute;right:4px;bottom:4px;width:14px;height:14px;border-radius:3px;background:#FFD600;cursor:se-resize;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,.4);"
-  bubble.append(vid, shapeBtn, rh)
+  rh.style.cssText="position:absolute;right:0;bottom:0;width:24px;height:24px;cursor:se-resize;z-index:10;"
+  bubble.append(vid,rh)
   document.body.append(bubble)
 
+  let camPos={x:window.innerWidth-228,y:80}, camSize={w:200,h:150}
+  let isDragging=false, isResizing=false, dragOffset={x:0,y:0}, resizeStart={}
+
   function applyShape(){
-    if(camShape==="circle"){
-      const d=Math.min(camSize.w,camSize.h)
-      bubble.style.borderRadius="50%"
-      bubble.style.width=d+"px"; bubble.style.height=d+"px"
-    } else if(camShape==="rounded"){
-      bubble.style.borderRadius="20px"
-      bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
-    } else {
-      bubble.style.borderRadius="6px"
-      bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
-    }
+    const r={rounded:"20px",circle:"50%",square:"6px"}[camShape]||"20px"
+    bubble.style.borderRadius=r
   }
-
-  // 拖动：记录鼠标按下时相对于气泡左上角的偏移
-  let camPos={x:window.innerWidth-228, y:window.innerHeight-246}
-  let camSize={w:200,h:150}
-  let isDragging=false, isResizing=false, dragOffset={x:0,y:0}
-
   function updateBubble(){
     bubble.style.left=camPos.x+"px"; bubble.style.top=camPos.y+"px"
     bubble.style.right="auto"; bubble.style.bottom="auto"
+    bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
     applyShape()
   }
-
   bubble.addEventListener("mousedown",e=>{
-    if(e.target===rh||shapeBtn.contains(e.target)) return
-    isDragging=true
-    // 关键：记录鼠标相对于气泡左上角的偏移，不用 getBoundingClientRect
-    dragOffset={x:e.clientX-camPos.x, y:e.clientY-camPos.y}
-    bubble.style.cursor="grabbing"
-    e.preventDefault()
+    if(e.target===rh) return
+    isDragging=true; dragOffset={x:e.clientX-camPos.x,y:e.clientY-camPos.y}
+    bubble.style.cursor="grabbing"; e.preventDefault()
   })
   rh.addEventListener("mousedown",e=>{
-    isResizing=true; e.stopPropagation(); e.preventDefault()
+    isResizing=true; resizeStart={mx:e.clientX,my:e.clientY,w:camSize.w,h:camSize.h}
+    e.stopPropagation(); e.preventDefault()
   })
   window.addEventListener("mousemove",e=>{
-    if(isDragging){
-      camPos={x:e.clientX-dragOffset.x, y:e.clientY-dragOffset.y}
-      updateBubble()
-    }
+    if(isDragging){ camPos={x:e.clientX-dragOffset.x,y:e.clientY-dragOffset.y}; updateBubble() }
     if(isResizing){
-      camSize={
-        w:Math.max(80,Math.min(600,e.clientX-camPos.x)),
-        h:Math.max(60,Math.min(500,e.clientY-camPos.y))
-      }
+      camSize={w:Math.max(80,Math.min(700,resizeStart.w+(e.clientX-resizeStart.mx))),
+               h:Math.max(60,Math.min(600,resizeStart.h+(e.clientY-resizeStart.my)))}
       updateBubble()
     }
   })
   window.addEventListener("mouseup",()=>{ isDragging=false; isResizing=false; bubble.style.cursor="grab" })
   bubble.addEventListener("wheel",e=>{
-    e.preventDefault()
-    const f=e.deltaY<0?1.1:0.9
-    camSize={w:Math.max(80,Math.min(600,Math.round(camSize.w*f))), h:Math.max(60,Math.min(500,Math.round(camSize.h*f)))}
+    e.preventDefault(); const f=e.deltaY<0?1.1:0.9
+    camSize={w:Math.max(80,Math.min(700,Math.round(camSize.w*f))),h:Math.max(60,Math.min(600,Math.round(camSize.h*f)))}
     updateBubble()
   },{passive:false})
 
-  // ── 工具栏 ────────────────────────────────────────────
+  // ── 工具栏外壳（可拖动） ──
   const bar=document.createElement("div")
-  bar.style.cssText=`
-    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-    background:rgba(12,12,12,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-    border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;
-    display:flex;align-items:center;gap:2px;
-    box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);
-    z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;
-  `
+  bar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
   document.body.append(bar)
 
-  function mkBtn(svg,tip){
+  // 工具栏拖动
+  let barDrag=false, barOff={x:0,y:0}
+  bar.addEventListener("mousedown",e=>{
+    if(e.target.closest("button")||e.target.closest("input")) return
+    barDrag=true
+    barOff={x:e.clientX-bar.getBoundingClientRect().left, y:e.clientY-bar.getBoundingClientRect().top}
+    bar.style.cursor="grabbing"; e.preventDefault()
+  })
+  window.addEventListener("mousemove",e=>{
+    if(!barDrag) return
+    bar.style.left=(e.clientX-barOff.x)+"px"
+    bar.style.top=(e.clientY-barOff.y)+"px"
+    bar.style.bottom="auto"; bar.style.transform="none"
+  })
+  window.addEventListener("mouseup",()=>{ barDrag=false; bar.style.cursor="grab" })
+
+  // ── 收起条 ──
+  const colBar=document.createElement("div")
+  colBar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:6px 20px;display:none;align-items:center;gap:6px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
+  colBar.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg><span style="font-size:11px;color:rgba(255,255,255,.3);">ShowAndTell</span>`
+  document.body.append(colBar)
+  colBar.onclick=()=>{ colBar.style.display="none"; bar.style.display="flex" }
+
+  // ── 按钮工厂 ──
+  function mkBtn(inner, tip){
     const b=document.createElement("button"); b.title=tip
-    b.style.cssText="width:44px;height:44px;border-radius:14px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"
-    b.innerHTML=svg
-    b.onmouseenter=()=>{ if(!b._on) b.style.background="rgba(255,255,255,.08)" }
+    b.style.cssText="border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:7px;height:38px;padding:0 12px;border-radius:12px;font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;transition:background .15s,outline .15s;flex-shrink:0;font-family:-apple-system,sans-serif;"
+    b.innerHTML=inner
+    b.onmouseenter=()=>{ if(!b._on) b.style.background="rgba(255,255,255,.09)" }
     b.onmouseleave=()=>{ if(!b._on) b.style.background="transparent" }
     return b
   }
-  function glow(b,on){
+  function setOn(b,on){
     b._on=on
     b.style.background=on?"rgba(255,214,0,.18)":"transparent"
-    b.style.outline=on?"1.5px solid rgba(255,214,0,.6)":"none"
+    b.style.outline=on?"1.5px solid rgba(255,214,0,.55)":"none"
   }
-  function sep(){ const d=document.createElement("div"); d.style.cssText="width:1px;height:20px;background:rgba(255,255,255,.08);margin:0 4px;flex-shrink:0;"; return d }
+  function sep(){ const d=document.createElement("div"); d.style.cssText="width:1px;height:20px;background:rgba(255,255,255,.08);margin:0 3px;flex-shrink:0;"; return d }
 
-  // 文字+图标按钮
-  function mkLabelBtn(icon, label, tip) {
-    const b = document.createElement("button"); b.title=tip
-    b.style.cssText="height:38px;padding:0 14px;border-radius:12px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s,outline .15s;"
-    b.innerHTML=`${icon}<span style="font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;">${label}</span>`
-    b.onmouseenter=()=>{ if(!b._on) b.style.background="rgba(255,255,255,.08)" }
-    b.onmouseleave=()=>{ if(!b._on) b.style.background="transparent" }
-    return b
-  }
+  const TW="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg"
+  const img=(code,size=20)=>`<img src="${TW}/${code}.svg" width="${size}" height="${size}" style="display:block;flex-shrink:0;">`
 
-  const closeSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`
+  // ── 按钮 ──
+  const bCam   = mkBtn(img("1f4f7")+"摄像头", "摄像头 C")
+  const bShape = mkBtn("···", "摄像框形状")
+  bShape.style.padding="0 8px"; bShape.style.fontSize="16px"; bShape.style.letterSpacing="1px"
 
-  // Twemoji CDN — 卡通风格 emoji 图片
-  function twemoji(code, size=22) {
-    return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/${code}.svg" width="${size}" height="${size}" style="display:block;flex-shrink:0;">`
-  }
-  // 📷 1f4f7  🖱️ 1f5b1  🔦 1f526  🎨 1f3a8  ⏺️ 23fa  ✕ 用SVG
-  const bCam   = mkLabelBtn(twemoji("1f4f7"), "摄像头", "摄像头 C")
-  const bMouse = mkLabelBtn(twemoji("1f5b1"), "鼠标",   "鼠标模式 M")
-  const bLaser = mkLabelBtn(twemoji("1f526"), "激光笔", "激光笔 L")
+  const bMic = mkBtn(`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.8" stroke-linecap="round"><rect id="micRect" x="9" y="2" width="6" height="11" rx="3" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.4)"/><path d="M5 11a7 7 0 0014 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>`, "麦克风")
+  bMic.style.padding="0 8px"; bMic.style.width="36px"
 
-  // 颜色按钮（文字+色块）
-  const bColor = document.createElement("button")
-  bColor.title="选择颜色"
-  bColor.style.cssText="height:38px;padding:0 12px;border-radius:12px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s;"
-  bColor.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f3a8.svg" width="22" height="22" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">颜色</span><div id="sat-cdot" style="width:10px;height:10px;border-radius:50%;background:${laserColor};border:1.5px solid rgba(255,255,255,.5);flex-shrink:0;"></div>`
-  bColor.onmouseenter=()=>bColor.style.background="rgba(255,255,255,.08)"
-  bColor.onmouseleave=()=>bColor.style.background="transparent"
-  const cdot = bColor.querySelector("#sat-cdot")
+  const bMouse = mkBtn(img("1f5b1",18)+"鼠标", "鼠标 M")
+  const bLaser = mkBtn(img("1f526")+"激光笔", "激光笔 L")
+  const bColor = mkBtn(img("1f3a8")+"颜色", "颜色")
 
-  // 录制按钮
   const bRec = document.createElement("button")
-  bRec.title="录制 R"
-  bRec.style.cssText="height:38px;padding:0 14px;border-radius:12px;border:none;background:rgba(255,59,48,.15);cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:all .15s;"
-  bRec.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f534.svg" width="20" height="20" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">录制</span>`
+  bRec.style.cssText="border:none;background:rgba(255,59,48,.15);cursor:pointer;display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:12px;font-size:13px;font-weight:600;color:#fff;transition:all .15s;flex-shrink:0;font-family:-apple-system,sans-serif;"
+  bRec.innerHTML=img("1f534",18)+"录制"
   bRec.onmouseenter=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.28)" }
   bRec.onmouseleave=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.15)" }
 
-  const timerEl = document.createElement("div")
-  timerEl.style.cssText="font-size:12px;font-weight:700;color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums;letter-spacing:.5px;min-width:34px;text-align:center;"
+  const timerEl=document.createElement("div")
+  timerEl.style.cssText="font-size:12px;font-weight:700;color:rgba(255,255,255,.7);font-variant-numeric:tabular-nums;letter-spacing:.5px;min-width:32px;text-align:center;"
   timerEl.textContent="00:00"
 
-  const bClose = mkBtn(closeSvg, "关闭 Esc")
+  const bToggle = mkBtn(`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M18 15l-6-6-6 6"/></svg>`, "收起")
+  bToggle.style.padding="0 8px"; bToggle.style.width="32px"
 
-  bar.append(bCam, sep(), bMouse, bLaser, bColor, sep(), bRec, timerEl, sep(), bClose)
-  glow(bMouse, true)
+  const bClose = mkBtn(`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`, "关闭 Esc")
+  bClose.style.padding="0 8px"; bClose.style.width="36px"
 
-  // ── 颜色面板 ──────────────────────────────────────────
+  bar.append(bCam, bShape, bMic, sep(), bMouse, bLaser, bColor, sep(), bRec, timerEl, sep(), bToggle, bClose)
+  setOn(bMouse, true)
+
+  // ── 收起/展开 ──
+  bToggle.onclick=()=>{ bar.style.display="none"; colBar.style.display="flex" }
+
+  // ── 颜色面板 ──
   const cpanel=document.createElement("div")
-  cpanel.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(14,14,14,.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:12px;display:none;flex-wrap:wrap;gap:8px;width:192px;box-shadow:0 20px 60px rgba(0,0,0,.7);z-index:2147483647;pointer-events:all;"
+  cpanel.style.cssText="position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:rgba(14,14,14,.97);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:12px;display:none;flex-wrap:wrap;gap:8px;width:196px;box-shadow:0 20px 60px rgba(0,0,0,.7);z-index:2147483647;pointer-events:all;"
   document.body.append(cpanel)
   COLORS.forEach(c=>{
     const s=document.createElement("div")
-    s.style.cssText=`width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:2.5px solid ${c===laserColor?"#fff":"transparent"};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);transition:all .15s;`
+    s.style.cssText=`width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:2.5px solid ${c===laserColor?"#fff":"transparent"};transition:all .15s;`
     s.onmouseenter=()=>s.style.transform="scale(1.2)"
     s.onmouseleave=()=>s.style.transform="scale(1)"
-    s.onclick=()=>{ laserColor=c; cdot.style.background=c; cpanel.querySelectorAll("div").forEach(d=>d.style.borderColor="transparent"); s.style.borderColor="#fff"; hideCp() }
+    s.onclick=()=>{ laserColor=c; cpanel.querySelectorAll("div").forEach(d=>d.style.borderColor="transparent"); s.style.borderColor="#fff"; hideCp() }
     cpanel.append(s)
   })
-  const sw=document.createElement("div"); sw.style.cssText="width:100%;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);"
-  const sh=document.createElement("div"); sh.style.cssText="display:flex;justify-content:space-between;margin-bottom:6px;"
-  const sl=document.createElement("span"); sl.style.cssText="font-size:11px;color:rgba(255,255,255,.4);"; sl.textContent="粗细"
-  const sv=document.createElement("span"); sv.style.cssText="font-size:11px;color:#fff;font-weight:600;"; sv.textContent=laserW+"px"
-  sh.append(sl,sv)
-  const si=document.createElement("input"); si.type="range";si.min=2;si.max=14;si.value=laserW;si.style.cssText="width:100%;accent-color:#FFD600;"
-  si.oninput=()=>{ laserW=+si.value; sv.textContent=laserW+"px" }
-  sw.append(sh,si); cpanel.append(sw)
+  const swRow=document.createElement("div"); swRow.style.cssText="width:100%;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);"
+  const swHead=document.createElement("div"); swHead.style.cssText="display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px;"
+  const swLbl=document.createElement("span"); swLbl.style.color="rgba(255,255,255,.4)"; swLbl.textContent="粗细"
+  const swVal=document.createElement("span"); swVal.style.cssText="color:#fff;font-weight:600;"; swVal.textContent=laserW+"px"
+  swHead.append(swLbl,swVal)
+  const swIn=document.createElement("input"); swIn.type="range";swIn.min=2;swIn.max=14;swIn.value=laserW;swIn.style.cssText="width:100%;accent-color:#FFD600;"
+  swIn.oninput=()=>{ laserW=+swIn.value; swVal.textContent=laserW+"px" }
+  swRow.append(swHead,swIn); cpanel.append(swRow)
   function hideCp(){ cpShown=false; cpanel.style.display="none" }
 
-  // ── 激光笔 ────────────────────────────────────────────
+  // ── 形状菜单 ──
+  const shapePop=document.createElement("div")
+  shapePop.style.cssText="position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:rgba(14,14,14,.97);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:8px;display:none;flex-direction:column;gap:4px;box-shadow:0 16px 48px rgba(0,0,0,.7);z-index:2147483647;pointer-events:all;min-width:110px;"
+  document.body.append(shapePop)
+  SHAPES.forEach(s=>{
+    const b=document.createElement("button")
+    b.textContent=s.label
+    b.style.cssText="border:none;background:transparent;cursor:pointer;display:flex;align-items:center;height:34px;padding:0 12px;border-radius:8px;font-size:13px;font-weight:600;color:#fff;font-family:-apple-system,sans-serif;width:100%;"
+    if(s.id===camShape) b.style.cssText+=";background:rgba(255,214,0,.18);color:#FFD600;"
+    b.onclick=()=>{
+      camShape=s.id; applyShape()
+      shapePop.querySelectorAll("button").forEach(x=>{ x.style.background="transparent"; x.style.color="#fff" })
+      b.style.background="rgba(255,214,0,.18)"; b.style.color="#FFD600"
+      hideSp()
+    }
+    shapePop.append(b)
+  })
+  function hideSp(){ spShown=false; shapePop.style.display="none" }
+
+  // ── 激光笔 ──
   function setLaser(on){
-    laserOn=on; glow(bLaser,on); glow(bMouse,!on)
+    laserOn=on; setOn(bLaser,on); setOn(bMouse,!on)
     lc.style.pointerEvents=on?"all":"none"
     lc.style.cursor=on?"crosshair":"default"
-    if(on) startLaser(); else stopLaser()
+    if(on) startLaserRaf(); else stopLaserRaf()
   }
-
   lc.addEventListener("mousedown",e=>{ drawing=true; trail=[{x:e.clientX,y:e.clientY,t:Date.now()}] })
   lc.addEventListener("mousemove",e=>{ if(drawing) trail.push({x:e.clientX,y:e.clientY,t:Date.now()}) })
-  lc.addEventListener("mouseup",  ()=>drawing=false)
+  lc.addEventListener("mouseup",()=>drawing=false)
   lc.addEventListener("mouseleave",()=>drawing=false)
-
-  function startLaser(){
+  function startLaserRaf(){
     if(raf)return
     function frame(){
       const now=Date.now(),F=700
@@ -231,92 +219,94 @@
     }
     raf=requestAnimationFrame(frame)
   }
-  function stopLaser(){ if(raf){cancelAnimationFrame(raf);raf=null}; lx.clearRect(0,0,lc.width,lc.height); trail=[] }
+  function stopLaserRaf(){ if(raf){cancelAnimationFrame(raf);raf=null}; lx.clearRect(0,0,lc.width,lc.height); trail=[] }
 
-  // ── 摄像头 ────────────────────────────────────────────
+  // ── 摄像头 ──
   async function startCam(){
     try{
       camStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false})
-      vid.srcObject=camStream
-      updateBubble(); applyShape()
-      bubble.style.display="block"; camOn=true; glow(bCam,true)
+      vid.srcObject=camStream; updateBubble(); bubble.style.display="block"
+      camOn=true; setOn(bCam,true)
     }catch(e){ alert("摄像头失败："+e.message) }
   }
   function stopCam(){
-    if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null }
-    bubble.style.display="none"; camOn=false; glow(bCam,false)
+    if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+    bubble.style.display="none"; camOn=false; setOn(bCam,false)
   }
 
-  // ── 录制 ──────────────────────────────────────────────
-  function fmt(s){ return`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}` }
+  // ── 麦克风 ──
+  async function toggleMic(){
+    const svg=bMic.querySelector("svg")
+    if(micOn){
+      if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
+      micOn=false; setOn(bMic,false)
+      svg.style.opacity=".4"
+    } else {
+      try{
+        micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false})
+        micOn=true; setOn(bMic,true); svg.style.opacity="1"
+      }catch(e){ alert("麦克风失败："+e.message) }
+    }
+  }
 
+  // ── 录制 ──
+  function fmt(s){return`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`}
   async function startRec(){
     try{
       const ss=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:true})
-      let ms=null; try{ ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false}) }catch{}
+      let ms=null; try{ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}catch{}
       const tracks=[...ss.getTracks()]; if(ms)tracks.push(...ms.getAudioTracks())
-      chunks=[]
-      recorder=new MediaRecorder(new MediaStream(tracks),{mimeType:"video/webm;codecs=vp9"})
-      recorder.ondataavailable=e=>{ if(e.data.size>0)chunks.push(e.data) }
+      chunks=[]; recorder=new MediaRecorder(new MediaStream(tracks),{mimeType:"video/webm;codecs=vp9"})
+      recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)}
       recorder.onstop=()=>{
         const blob=new Blob(chunks,{type:"video/webm"})
         ss.getTracks().forEach(t=>t.stop()); if(ms)ms.getTracks().forEach(t=>t.stop())
         exportPanel(blob)
       }
       recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
-      bRec.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/23f9.svg" width="20" height="20" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">停止</span>`
-      bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
+      bRec.innerHTML=img("23f9",18)+"停止"; bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
-      recTimer=setInterval(()=>{ recSecs++; timerEl.textContent=fmt(recSecs) },1000)
+      recTimer=setInterval(()=>{recSecs++;timerEl.textContent=fmt(recSecs)},1000)
       ss.getVideoTracks()[0].onended=stopRec
-    }catch(e){ console.error(e) }
+    }catch(e){console.error(e)}
   }
-
   function stopRec(){
     if(!recOn)return; recOn=false; clearInterval(recTimer)
     if(recorder?.state!=="inactive")recorder.stop()
-    bRec.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f534.svg" width="20" height="20" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">录制</span>`
-    bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
-    timerEl.style.color="rgba(255,255,255,.8)"; timerEl.textContent="00:00"; recSecs=0
+    bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
+    timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
   }
-
-  // ── 导出面板 ──────────────────────────────────────────
   function exportPanel(blob){
     const p=document.createElement("div")
-    p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:320px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
-    const mb=(blob.size/1024/1024).toFixed(1)
-    const sec=recSecs, dur=fmt(sec)
-    p.innerHTML=`
-      <div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:28px;">${dur} · ${mb} MB</div>
-      <button id="edl" style="width:100%;height:50px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button>
-      <button id="ecls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>
-    `
+    p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:300px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
+    p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
-    p.querySelector("#edl").onclick=()=>{
+    p.querySelector("#sat-dl").onclick=()=>{
       const u=URL.createObjectURL(blob),a=document.createElement("a")
-      a.href=u; a.download=`showandtell-${Date.now()}.webm`
-      document.body.append(a); a.click(); a.remove()
-      setTimeout(()=>URL.revokeObjectURL(u),3e3)
-      p.remove()
+      a.href=u;a.download=`showandtell-${Date.now()}.webm`;document.body.append(a);a.click();a.remove()
+      setTimeout(()=>URL.revokeObjectURL(u),3e3); p.remove()
     }
-    p.querySelector("#ecls").onclick=()=>p.remove()
+    p.querySelector("#sat-cls").onclick=()=>p.remove()
   }
 
-  // ── 显示/隐藏 ─────────────────────────────────────────
+  // ── 显示/隐藏 ──
   function showAll(){ shown=true; bar.style.display="flex"; if(camOn)bubble.style.display="block" }
-  function hideAll(){ shown=false; bar.style.display="none"; bubble.style.display="none"; lc.style.pointerEvents="none"; setLaser(false); stopCam(); if(recOn)stopRec(); hideCp() }
+  function hideAll(){ shown=false; bar.style.display="none"; colBar.style.display="none"; bubble.style.display="none"; setLaser(false); stopCam(); if(recOn)stopRec(); hideCp(); hideSp() }
 
-  // ── 事件 ──────────────────────────────────────────────
-  bCam.onclick   = ()=> camOn ? stopCam() : startCam()
+  // ── 事件绑定 ──
+  bCam.onclick   = ()=> camOn?stopCam():startCam()
+  bShape.onclick = e=>{ e.stopPropagation(); spShown=!spShown; shapePop.style.display=spShown?"flex":"none" }
+  bMic.onclick   = ()=> toggleMic()
   bMouse.onclick = ()=> setLaser(false)
   bLaser.onclick = ()=> setLaser(!laserOn)
   bColor.onclick = e=>{ e.stopPropagation(); cpShown=!cpShown; cpanel.style.display=cpShown?"flex":"none" }
-  bRec.onclick   = ()=> recOn ? stopRec() : startRec()
+  bRec.onclick   = ()=> recOn?stopRec():startRec()
+  bToggle.onclick= ()=>{ bar.style.display="none"; colBar.style.display="flex" }
   bClose.onclick = ()=> hideAll()
 
   document.addEventListener("click",e=>{
-    if(!cpanel.contains(e.target)&&!bColor.contains(e.target)) hideCp()
+    if(!cpanel.contains(e.target)&&e.target!==bColor) hideCp()
+    if(!shapePop.contains(e.target)&&e.target!==bShape) hideSp()
   })
   document.addEventListener("keydown",e=>{
     if(!shown||["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return
