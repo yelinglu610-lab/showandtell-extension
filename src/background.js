@@ -18,3 +18,10 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   if (!tab || !tab.url || tab.url.startsWith("chrome://")) return
   inject(tabId)
 })
+
+// 同一标签页内跳转：页面加载完成后重新注入
+chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+  if (info.status !== "complete") return
+  if (!tab.url || tab.url.startsWith("chrome://")) return
+  inject(tabId)
+})
