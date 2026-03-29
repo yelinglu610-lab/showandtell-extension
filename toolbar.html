@@ -60,11 +60,16 @@
     width:200px; height:150px; border-radius:20px; overflow:hidden;
     box-shadow:0 0 0 3px #fff, 0 8px 32px rgba(0,0,0,.4);
     background:#000; display:none; -webkit-app-region:no-drag;
-    resize:both; overflow:auto;
+    cursor:grab;
   }
-  #bubble video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; }
-  #shapeBar { position:absolute; top:6px; right:6px; background:rgba(0,0,0,.55); border-radius:8px; padding:3px 6px; display:flex; gap:4px; z-index:10; }
+  #bubble video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; pointer-events:none; }
+  #shapeBar { position:absolute; top:6px; right:6px; background:rgba(0,0,0,.55); border-radius:8px; padding:3px 6px; display:flex; gap:4px; z-index:10; pointer-events:all; }
   #shapeBar span { font-size:11px; cursor:pointer; transition:color .15s; }
+  #resizeHandle {
+    position:absolute; right:4px; bottom:4px; width:16px; height:16px;
+    background:#FFD600; border-radius:4px; cursor:se-resize; z-index:10;
+    box-shadow:0 1px 4px rgba(0,0,0,.4); pointer-events:all;
+  }
 
   /* 导出面板 */
   #expanel {
@@ -100,7 +105,7 @@
 </div>
 
 <div id="cpanel"></div>
-<div id="bubble"><video id="vid" autoplay muted playsinline></video><div id="shapeBar"></div></div>
+<div id="bubble"><video id="vid" autoplay muted playsinline></video><div id="shapeBar"></div><div id="resizeHandle"></div></div>
 <div id="expanel"><h2>录制完成</h2><div class="sub" id="esub"></div><button id="edl">下载录制文件</button><button id="ecls">关闭</button></div>
 
 <script>
@@ -151,22 +156,78 @@ function applyShape(){
   bub.style.borderRadius=r
 }
 
-// ── 摄像头 ──
-document.getElementById("bCam").onclick=async()=>{
-  if(camOn){ stopCam() } else { await startCam() }
+// ── 摄像头拖拽+缩放 ──
+const bub = document.getElementById("bubble")
+const rh = document.getElementById("resizeHandle")
+let camPos = { x: window.innerWidth - 228, y: 20 }
+let camSize = { w: 200, h: 150 }
+let isDragging = false, isResizing = false, dragOffset = { x: 0, y: 0 }, resizeStart = {}
+
+function updateBubble() {
+  bub.style.left = camPos.x + "px"; bub.style.top = camPos.y + "px"
+  bub.style.right = "auto"; bub.style.bottom = "auto"
+  bub.style.width = camSize.w + "px"; bub.style.height = camSize.h + "px"
+  applyShape()
 }
-async function startCam(){
-  try{
-    camStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false})
-    document.getElementById("vid").srcObject=camStream
-    const bub=document.getElementById("bubble"); bub.style.display="block"; applyShape()
-    camOn=true; setOn(document.getElementById("bCam"),true)
-  }catch(e){ alert("摄像头失败："+e.message) }
+
+bub.addEventListener("mousedown", e => {
+  if (e.target === rh || document.getElementById("shapeBar").contains(e.target)) return
+  isDragging = true
+  dragOffset = { x: e.clientX - camPos.x, y: e.clientY - camPos.y }
+  bub.style.cursor = "grabbing"
+  e.preventDefault()
+})
+rh.addEventListener("mousedown", e => {
+  isResizing = true
+  resizeStart = { mx: e.clientX, my: e.clientY, w: camSize.w, h: camSize.h }
+  e.stopPropagation(); e.preventDefault()
+})
+window.addEventListener("mousemove", e => {
+  if (isDragging) {
+    camPos = { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y }
+    updateBubble()
+  }
+  if (isResizing) {
+    const dx = e.clientX - resizeStart.mx
+    const dy = e.clientY - resizeStart.my
+    camSize = {
+      w: Math.max(80, Math.min(700, resizeStart.w + dx)),
+      h: Math.max(60, Math.min(600, resizeStart.h + dy))
+    }
+    updateBubble()
+  }
+})
+window.addEventListener("mouseup", () => {
+  isDragging = false; isResizing = false; bub.style.cursor = "grab"
+})
+bub.addEventListener("wheel", e => {
+  e.preventDefault()
+  const f = e.deltaY < 0 ? 1.1 : 0.9
+  camSize = {
+    w: Math.max(80, Math.min(700, Math.round(camSize.w * f))),
+    h: Math.max(60, Math.min(600, Math.round(camSize.h * f)))
+  }
+  updateBubble()
+}, { passive: false })
+
+document.getElementById("bCam").onclick = async () => {
+  if (camOn) { stopCam() } else { await startCam() }
 }
-function stopCam(){
-  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
-  document.getElementById("bubble").style.display="none"
-  camOn=false; setOn(document.getElementById("bCam"),false)
+async function startCam() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false })
+    document.getElementById("vid").srcObject = camStream
+    camPos = { x: window.innerWidth - 228, y: 20 }
+    camSize = { w: 200, h: 150 }
+    updateBubble()
+    bub.style.display = "block"
+    camOn = true; setOn(document.getElementById("bCam"), true)
+  } catch(e) { alert("摄像头失败：" + e.message) }
+}
+function stopCam() {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null }
+  bub.style.display = "none"
+  camOn = false; setOn(document.getElementById("bCam"), false)
 }
 
 // ── 激光/鼠标 ──
