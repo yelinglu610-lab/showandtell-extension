@@ -34,10 +34,6 @@
 
   function applyShape(){
     if(camShape==="circle"){
-      // 正圆：取宽高最小值，强制正方形
-      const d=Math.min(camSize.w,camSize.h)
-      camSize.w=d; camSize.h=d
-      bubble.style.width=d+"px"; bubble.style.height=d+"px"
       bubble.style.borderRadius="50%"
     } else {
       bubble.style.borderRadius={rounded:"20px",square:"6px"}[camShape]||"20px"
@@ -46,7 +42,13 @@
   function updateBubble(){
     bubble.style.left=camPos.x+"px"; bubble.style.top=camPos.y+"px"
     bubble.style.right="auto"; bubble.style.bottom="auto"
-    bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
+    // 圆形模式：宽高取小值保持正圆
+    if(camShape==="circle"){
+      const d=Math.min(camSize.w,camSize.h)
+      bubble.style.width=d+"px"; bubble.style.height=d+"px"
+    } else {
+      bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
+    }
     applyShape()
   }
   bubble.addEventListener("mousedown",e=>{
@@ -72,10 +74,12 @@
     }
   })
   window.addEventListener("mouseup",()=>{ isDragging=false; isResizing=false; bubble.style.cursor="grab" })
+  let wheelRaf=null
   bubble.addEventListener("wheel",e=>{
-    e.preventDefault(); const f=e.deltaY<0?1.1:0.9
-    camSize={w:Math.max(80,Math.min(700,Math.round(camSize.w*f))),h:Math.max(60,Math.min(600,Math.round(camSize.h*f)))}
-    updateBubble()
+    e.preventDefault()
+    const f=e.deltaY<0?1.05:0.95 // 更小步长，更顺滑
+    camSize={w:Math.max(80,Math.min(700,camSize.w*f)),h:Math.max(60,Math.min(600,camSize.h*f))}
+    if(!wheelRaf) wheelRaf=requestAnimationFrame(()=>{ updateBubble(); wheelRaf=null })
   },{passive:false})
 
   // ── 工具栏 ──
