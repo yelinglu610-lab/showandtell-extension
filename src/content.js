@@ -384,45 +384,55 @@
     }
   }
 
-  // ── 录制 ──
+  // ── 录制（由 background 管理，跨页面跳转不中断）──
   function fmt(s){return`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`}
-  async function startRec(){
-    try{
-      const ss=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:true})
-      let ms=null; try{ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}catch{}
-      const tracks=[...ss.getTracks()]; if(ms)tracks.push(...ms.getAudioTracks())
-      chunks=[]; recorder=new MediaRecorder(new MediaStream(tracks),{mimeType:"video/webm;codecs=vp9"})
-      recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)}
-      recorder.onstop=()=>{
-        const blob=new Blob(chunks,{type:"video/webm"})
-        ss.getTracks().forEach(t=>t.stop()); if(ms)ms.getTracks().forEach(t=>t.stop())
-        exportPanel(blob)
-      }
-      recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
+
+  function setRecUI(on){
+    recOn=on
+    if(on){
       bRec.innerHTML=img("23f9",18)+"停止"; bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
-      recTimer=setInterval(()=>{recSecs++;timerEl.textContent=fmt(recSecs)},1000)
-      ss.getVideoTracks()[0].onended=stopRec
-    }catch(e){console.error(e)}
+    } else {
+      bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
+      timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
+    }
+  }
+
+  function startRec(){
+    chrome.runtime.sendMessage({ type: "REC_START" })
+    setRecUI(true); recSecs=0; timerEl.textContent="00:00"
   }
   function stopRec(){
-    if(!recOn)return; recOn=false; clearInterval(recTimer)
-    if(recorder?.state!=="inactive")recorder.stop()
-    bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
-    timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
+    if(!recOn) return
+    chrome.runtime.sendMessage({ type: "REC_STOP" })
+    setRecUI(false)
   }
-  function exportPanel(blob){
+
+  function exportPanel(blobUrl, secs){
     const p=document.createElement("div")
     p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:300px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
-    p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
+    p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(secs)}</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
     p.querySelector("#sat-dl").onclick=()=>{
-      const u=URL.createObjectURL(blob),a=document.createElement("a")
-      a.href=u;a.download=`showandtell-${Date.now()}.webm`;document.body.append(a);a.click();a.remove()
-      setTimeout(()=>URL.revokeObjectURL(u),3e3); p.remove()
+      const a=document.createElement("a")
+      a.href=blobUrl; a.download=`showandtell-${Date.now()}.webm`
+      document.body.append(a); a.click(); a.remove(); p.remove()
     }
     p.querySelector("#sat-cls").onclick=()=>p.remove()
   }
+
+  // 接收 background 消息
+  chrome.runtime.onMessage.addListener((msg)=>{
+    if(msg.type==="REC_TICK"){ recSecs=msg.secs; timerEl.textContent=fmt(recSecs) }
+    if(msg.type==="REC_SYNC"){ setRecUI(true); recSecs=msg.secs; timerEl.textContent=fmt(recSecs) }
+    if(msg.type==="REC_DONE"){ setRecUI(false); exportPanel(msg.url, msg.secs) }
+    if(msg.type==="REC_ERROR"){ setRecUI(false); console.error("SAT rec:",msg.msg) }
+  })
+
+  // 初始化时同步录制状态
+  chrome.runtime.sendMessage({ type: "REC_STATUS" }, (res)=>{
+    if(res?.on){ setRecUI(true); recSecs=res.secs; timerEl.textContent=fmt(recSecs) }
+  })
 
   // ── 显示/隐藏 ──
   function showAll(){ shown=true; bar.style.display="flex"; if(camOn)bubble.style.display="block" }
