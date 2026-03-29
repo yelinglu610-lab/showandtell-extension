@@ -92,10 +92,10 @@
     return b
   }
 
-  // 图标 SVG（更大更清晰）
-  const camSvg   = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>`
-  const mouseSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="16" rx="5"/><line x1="12" y1="6" x2="12" y2="10"/></svg>`
-  const laserSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="3" fill="#FF3B30" stroke="none"/><line x1="8.5" y1="15.5" x2="20" y2="4"/><line x1="21" y1="3" x2="22" y2="2"/></svg>`
+  // 图标：filled 风格，跟文字对齐
+  const camSvg   = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 9a4 4 0 100 8 4 4 0 000-8zm0 6a2 2 0 110-4 2 2 0 010 4z"/><path d="M21 6h-3.17l-1.24-1.35A1.99 1.99 0 0015.12 4H8.88c-.56 0-1.1.24-1.48.65L6.17 6H3a2 2 0 00-2 2v11a2 2 0 002 2h18a2 2 0 002-2V8a2 2 0 00-2-2z"/></svg>`
+  const mouseSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M13 1.07V9h7a8 8 0 00-7-7.93zM4 15a8 8 0 0015.93-2H11V4.07C7.06 4.56 4 7.92 4 12v3z"/><path d="M11 1.07V9H4a8 8 0 017-7.93z"/></svg>`
+  const laserSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><circle cx="5.5" cy="18.5" r="3.5" fill="#FF3B30"/><rect x="10" y="3" width="3" height="14" rx="1.5" transform="rotate(-45 10 3)" fill="#fff"/></svg>`
   const closeSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`
 
   const bCam   = mkLabelBtn(camSvg,   "摄像头", "摄像头 C")
