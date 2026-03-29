@@ -21,7 +21,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     width: 620,
     height: 58,
     top: 20,
-    left: Math.round((screen.width - 620) / 2),
+    left: Math.round((1920 - 620) / 2),
     focused: false,
   })
   toolbarWinId = win.id
