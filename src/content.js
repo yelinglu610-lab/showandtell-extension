@@ -111,16 +111,17 @@
   bar.style.cssText="position:fixed;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
   document.body.append(bar)
 
-  // 初始化位置（等 DOM 渲染完拿到真实宽度）
-  function initBarPos() {
+  // 初始化位置：先隐藏，读完状态再显示，避免跳动
+  bar.style.visibility = "hidden"
+  requestAnimationFrame(()=>{
     const r = bar.getBoundingClientRect()
     barW = r.width
     barLeft = Math.round((window.innerWidth - barW) / 2)
     barTop  = Math.round(window.innerHeight - r.height - 24)
     bar.style.left = barLeft + "px"
     bar.style.top  = barTop  + "px"
-  }
-  requestAnimationFrame(initBarPos)
+    // visibility 在 GET_STATE 回调里恢复
+  })
 
   bar.addEventListener("mousedown", e=>{
     if (e.target.closest("button") || e.target.closest("input")) return
@@ -482,12 +483,13 @@
 
   // ── 启动：读取上次状态 ──
   chrome.runtime.sendMessage({ type: "GET_STATE" }, (state) => {
-    if (!state) { showAll(); return }
+    if (!state) { bar.style.visibility=""; showAll(); return }
     // 恢复位置
     if (state.barLeft != null && state.barTop != null) {
       barLeft = state.barLeft; barTop = state.barTop
       bar.style.left = barLeft + "px"; bar.style.top = barTop + "px"
     }
+    bar.style.visibility = "" // 位置确定后再显示，不跳动
     // 恢复最小化
     if (state.collapsed) {
       bar.style.display = "none"
