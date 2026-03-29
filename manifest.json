@@ -3,7 +3,7 @@
   "name": "ShowAndTell",
   "version": "2.2.0",
   "description": "激光笔 · 摄像头 · 录制 · 悬浮工具栏",
-  "permissions": ["activeTab", "scripting", "tabs", "tabCapture"],
+  "permissions": ["activeTab", "scripting", "tabs", "tabCapture", "offscreen"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_icon": {
@@ -19,5 +19,6 @@
   "web_accessible_resources": [{
     "resources": ["src/content.css", "src/content.js"],
     "matches": ["<all_urls>"]
-  }]
+  }],
+  "offscreen": "offscreen.html"
 }
