@@ -92,21 +92,22 @@
     return b
   }
 
-  // 图标：filled 风格，跟文字对齐
-  const camSvg   = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 9a4 4 0 100 8 4 4 0 000-8zm0 6a2 2 0 110-4 2 2 0 010 4z"/><path d="M21 6h-3.17l-1.24-1.35A1.99 1.99 0 0015.12 4H8.88c-.56 0-1.1.24-1.48.65L6.17 6H3a2 2 0 00-2 2v11a2 2 0 002 2h18a2 2 0 002-2V8a2 2 0 00-2-2z"/></svg>`
-  const mouseSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M13 1.07V9h7a8 8 0 00-7-7.93zM4 15a8 8 0 0015.93-2H11V4.07C7.06 4.56 4 7.92 4 12v3z"/><path d="M11 1.07V9H4a8 8 0 017-7.93z"/></svg>`
-  const laserSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><circle cx="5.5" cy="18.5" r="3.5" fill="#FF3B30"/><rect x="10" y="3" width="3" height="14" rx="1.5" transform="rotate(-45 10 3)" fill="#fff"/></svg>`
   const closeSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`
 
-  const bCam   = mkLabelBtn(camSvg,   "摄像头", "摄像头 C")
-  const bMouse = mkLabelBtn(mouseSvg, "鼠标",   "鼠标模式 M")
-  const bLaser = mkLabelBtn(laserSvg, "激光笔", "激光笔 L")
+  // Twemoji CDN — 卡通风格 emoji 图片
+  function twemoji(code, size=22) {
+    return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/${code}.svg" width="${size}" height="${size}" style="display:block;flex-shrink:0;">`
+  }
+  // 📷 1f4f7  🖱️ 1f5b1  🔦 1f526  🎨 1f3a8  ⏺️ 23fa  ✕ 用SVG
+  const bCam   = mkLabelBtn(twemoji("1f4f7"), "摄像头", "摄像头 C")
+  const bMouse = mkLabelBtn(twemoji("1f5b1"), "鼠标",   "鼠标模式 M")
+  const bLaser = mkLabelBtn(twemoji("1f526"), "激光笔", "激光笔 L")
 
   // 颜色按钮（文字+色块）
   const bColor = document.createElement("button")
   bColor.title="选择颜色"
   bColor.style.cssText="height:38px;padding:0 12px;border-radius:12px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s;"
-  bColor.innerHTML=`<div id="sat-cdot" style="width:14px;height:14px;border-radius:50%;background:${laserColor};border:2px solid rgba(255,255,255,.4);flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:#fff;">颜色</span>`
+  bColor.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f3a8.svg" width="22" height="22" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">颜色</span><div id="sat-cdot" style="width:10px;height:10px;border-radius:50%;background:${laserColor};border:1.5px solid rgba(255,255,255,.5);flex-shrink:0;"></div>`
   bColor.onmouseenter=()=>bColor.style.background="rgba(255,255,255,.08)"
   bColor.onmouseleave=()=>bColor.style.background="transparent"
   const cdot = bColor.querySelector("#sat-cdot")
@@ -115,7 +116,7 @@
   const bRec = document.createElement("button")
   bRec.title="录制 R"
   bRec.style.cssText="height:38px;padding:0 14px;border-radius:12px;border:none;background:rgba(255,59,48,.15);cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:all .15s;"
-  bRec.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FF3B30"/></svg><span style="font-size:13px;font-weight:600;color:#fff;">录制</span>`
+  bRec.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f534.svg" width="20" height="20" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">录制</span>`
   bRec.onmouseenter=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.28)" }
   bRec.onmouseleave=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.15)" }
 
@@ -216,7 +217,7 @@
         exportPanel(blob)
       }
       recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
-      bRec.innerHTML=`<svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="3" fill="#fff"/></svg><span style="font-size:13px;font-weight:600;color:#fff;">停止</span>`
+      bRec.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/23f9.svg" width="20" height="20" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">停止</span>`
       bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
       recTimer=setInterval(()=>{ recSecs++; timerEl.textContent=fmt(recSecs) },1000)
@@ -227,7 +228,7 @@
   function stopRec(){
     if(!recOn)return; recOn=false; clearInterval(recTimer)
     if(recorder?.state!=="inactive")recorder.stop()
-    bRec.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FF3B30"/></svg><span style="font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;">录制</span>`
+    bRec.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f534.svg" width="20" height="20" style="display:block;flex-shrink:0;"><span style="font-size:13px;font-weight:600;color:#fff;">录制</span>`
     bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
     timerEl.style.color="rgba(255,255,255,.8)"; timerEl.textContent="00:00"; recSecs=0
   }
