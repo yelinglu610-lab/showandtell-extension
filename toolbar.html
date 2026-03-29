@@ -36,6 +36,13 @@
     font-variant-numeric:tabular-nums; letter-spacing:.5px; min-width:34px; text-align:center; -webkit-app-region:no-drag; }
   #timer.active { color:#FF3B30; }
   .close-btn { width:36px; height:36px; padding:0; justify-content:center; border-radius:10px; }
+  #bMic { width:36px; height:36px; padding:0; justify-content:center; border-radius:10px; position:relative; }
+  #bMic.on svg rect, #bMic.on svg path, #bMic.on svg line { fill:#fff; stroke:#fff; }
+  #bMic .mic-off {
+    display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:2px; height:26px; background:#FF3B30; border-radius:1px; rotate:-45deg;
+  }
+  #bMic.muted .mic-off { display:block; }
 
   /* 颜色面板 */
   #cpanel {
@@ -88,6 +95,15 @@
 <body>
 <div class="bar" id="bar">
   <button id="bCam"><img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f4f7.svg" width="20" height="20">摄像头</button>
+  <button id="bMic" title="麦克风 on/off">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,.35)" xmlns="http://www.w3.org/2000/svg">
+      <rect x="9" y="2" width="6" height="11" rx="3"/>
+      <path d="M5 11a7 7 0 0014 0" stroke="rgba(255,255,255,.35)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <line x1="12" y1="18" x2="12" y2="22" stroke="rgba(255,255,255,.35)" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="9" y1="22" x2="15" y2="22" stroke="rgba(255,255,255,.35)" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <div class="mic-off"></div>
+  </button>
   <div class="sep"></div>
   <button id="bMouse" class="on"><img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f5b1.svg" width="18" height="18">鼠标</button>
   <button id="bLaser"><img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/svg/1f526.svg" width="20" height="20">激光笔</button>
@@ -285,6 +301,35 @@ function showExport(){
     setTimeout(()=>URL.revokeObjectURL(u),3e3); ep.style.display="none"
   }
   document.getElementById("ecls").onclick=()=>ep.style.display="none"
+}
+
+// ── 麦克风 on/off ──
+let micOn = false
+let micStream = null
+document.getElementById("bMic").onclick = async () => {
+  const btn = document.getElementById("bMic")
+  if (micOn) {
+    // 关麦
+    if (micStream) { micStream.getTracks().forEach(t=>t.stop()); micStream = null }
+    micOn = false
+    btn.classList.remove("on")
+    btn.classList.add("muted")
+    // 更新SVG颜色为暗色
+    btn.querySelectorAll("rect,path,line").forEach(el=>{
+      el.style.fill="rgba(255,255,255,.35)"; el.style.stroke="rgba(255,255,255,.35)"
+    })
+  } else {
+    // 开麦
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      micOn = true
+      btn.classList.add("on")
+      btn.classList.remove("muted")
+      btn.querySelectorAll("rect,path,line").forEach(el=>{
+        el.style.fill="#fff"; el.style.stroke="#fff"
+      })
+    } catch(e) { alert("麦克风失败：" + e.message) }
+  }
 }
 
 // ── 关闭 ──
