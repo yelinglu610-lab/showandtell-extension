@@ -128,9 +128,7 @@
     barDrag = false
     bar.style.cursor = "grab"
     bar.style.transition = ""
-    // 记录上下供收起用
-    const r = bar.getBoundingClientRect()
-    barAnchored = (barTop + r.height/2) < window.innerHeight/2 ? "top" : "bottom"
+    // 松手停原地，不吸边
   })
 
   // ── 收起胶囊（右下角） ──
