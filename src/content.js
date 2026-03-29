@@ -133,46 +133,30 @@
     barAnchored = (barTop + r.height/2) < window.innerHeight/2 ? "top" : "bottom"
   })
 
-  // ── 收起条 ──
+  // ── 收起胶囊（右下角） ──
   const colBar=document.createElement("div")
-  colBar.style.cssText="position:fixed;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 18px;display:none;align-items:center;gap:6px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
-  colBar.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.5" stroke-linecap="round" id="colArrow"><path d="M6 9l6 6 6-6"/></svg><span style="font-size:11px;color:rgba(255,255,255,.3);">ShowAndTell</span>`
+  colBar.style.cssText="position:fixed;right:0;bottom:40px;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:12px 0 0 12px;padding:10px 8px;display:none;flex-direction:column;align-items:center;gap:4px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
+  colBar.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font-size:10px;color:rgba(255,255,255,.35);writing-mode:vertical-rl;letter-spacing:1px;">SAT</span>`
   document.body.append(colBar)
-
-  function snapColBar(){
-    const r = bar.getBoundingClientRect()
-    // 水平居中跟随工具栏
-    colBar.style.left = (r.left + r.width/2) + "px"
-    colBar.style.transform = "translateX(-50%)"
-    if(barAnchored==="top"){
-      colBar.style.top="16px"; colBar.style.bottom="auto"
-      colBar.querySelector("path").setAttribute("d","M6 15l6-6 6 6")
-    } else {
-      colBar.style.bottom="16px"; colBar.style.top="auto"
-      colBar.querySelector("path").setAttribute("d","M6 9l6 6 6-6")
-    }
-  }
 
   colBar.onclick=()=>{
     colBar.style.display="none"
     barAnchored="bottom"
-    // 回到底部居中
-    const r=bar.getBoundingClientRect()
-    barLeft = Math.round((window.innerWidth - r.width) / 2)
-    barTop  = Math.round(window.innerHeight - r.height - 24)
+    // 回到底部居中，从右侧滑入
+    const bh = bar.getBoundingClientRect().height || 52
+    barLeft = Math.round((window.innerWidth - (bar.getBoundingClientRect().width||400)) / 2)
+    barTop  = Math.round(window.innerHeight - bh - 24)
     bar.style.left = barLeft + "px"
     bar.style.top  = barTop + "px"
-    // 从对应边滑入
-    const fromY = barAnchored==="top" ? "-130%" : "130%"
-    bar.style.transform = `translateY(${fromY})`
+    bar.style.transform = "translateX(120%)"
     bar.style.opacity = "0"
     bar.style.display = "flex"
     bar.style.transition = "none"
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      bar.style.transition = "transform .22s cubic-bezier(.34,1.4,.64,1), opacity .18s"
+      bar.style.transition = "transform .26s cubic-bezier(.34,1.3,.64,1), opacity .2s"
       bar.style.transform = "none"
       bar.style.opacity = "1"
-      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" }, 240)
+      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" }, 280)
     }))
   }
 
@@ -228,24 +212,15 @@
 
   // ── 收起/展开 ──
   bToggle.onclick=()=>{
-    const r = bar.getBoundingClientRect()
-    const isTop = barAnchored === "top"
-    // step1: 瞬间移到对应边（无动画）
-    barTop = isTop ? 16 : window.innerHeight - r.height - 16
-    bar.style.transition = "none"
-    bar.style.top = barTop + "px"
-    // step2: 下一帧启动滑出动画
-    requestAnimationFrame(()=>{
-      bar.style.transition = "transform .22s ease, opacity .18s"
-      bar.style.transform = isTop ? "translateY(-130%)" : "translateY(130%)"
-      bar.style.opacity = "0"
-    })
+    // 向右滑出
+    bar.style.transition = "transform .22s ease, opacity .18s"
+    bar.style.transform = "translateX(120%)"
+    bar.style.opacity = "0"
     setTimeout(()=>{
       bar.style.display = "none"
       bar.style.transform = "none"
       bar.style.opacity = ""
       bar.style.transition = ""
-      snapColBar()
       colBar.style.display = "flex"
     }, 230)
   }
