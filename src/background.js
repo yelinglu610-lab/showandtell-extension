@@ -53,26 +53,22 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       rec.recorder.ondataavailable = e => { if (e.data.size > 0) rec.chunks.push(e.data) }
       rec.recorder.onstop = () => {
         const blob = new Blob(rec.chunks, { type: "video/webm" })
-        // 通知 content 下载
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              type: "REC_DONE",
-              secs: rec.secs,
-              url: URL.createObjectURL(blob)
-            }).catch(()=>{})
-          }
-        })
+        const url = URL.createObjectURL(blob)
+        const secs = rec.secs
         rec.on = false; rec.secs = 0
         clearInterval(rec.timer); rec.timer = null
+        // 广播给所有 tab，哪个收到就弹下载
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: "REC_DONE", secs, url }).catch(()=>{}))
+        })
       }
       rec.recorder.start()
       rec.on = true; rec.secs = 0
       rec.timer = setInterval(() => {
         rec.secs++
-        // 广播计时给当前 tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { type: "REC_TICK", secs: rec.secs }).catch(()=>{})
+        // 广播给所有 tab
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: "REC_TICK", secs: rec.secs }).catch(()=>{}))
         })
       }, 1000)
     })
