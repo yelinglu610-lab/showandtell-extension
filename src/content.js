@@ -93,14 +93,42 @@
     bar.style.left=(e.clientX-barOff.x)+"px"
     bar.style.top=(e.clientY-barOff.y)+"px"
   })
-  window.addEventListener("mouseup",()=>{ barDrag=false; bar.style.cursor="grab" })
+  window.addEventListener("mouseup",()=>{
+    if(barDrag){
+      barDrag=false; bar.style.cursor="grab"
+      // 松手时吸边：判断 bar 中心在上半还是下半屏
+      const r=bar.getBoundingClientRect()
+      const barCY=r.top+r.height/2
+      bar.style.transition="top .25s cubic-bezier(.4,0,.2,1),bottom .25s cubic-bezier(.4,0,.2,1)"
+      if(barCY < window.innerHeight/2){
+        // 上半屏 → 吸顶
+        bar.style.top="16px"; bar.style.bottom="auto"
+      } else {
+        // 下半屏 → 吸底
+        bar.style.top="auto"; bar.style.bottom="16px"
+        bar.style.left=r.left+"px"; bar.style.transform="none"
+      }
+      setTimeout(()=>bar.style.transition="",300)
+    }
+  })
 
   // ── 收起条 ──
   const colBar=document.createElement("div")
   colBar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:6px 20px;display:none;align-items:center;gap:6px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
   colBar.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg><span style="font-size:11px;color:rgba(255,255,255,.3);">ShowAndTell</span>`
   document.body.append(colBar)
-  colBar.onclick=()=>{ colBar.style.display="none"; bar.style.display="flex" }
+  colBar.onclick=()=>{
+    colBar.style.display="none"
+    const isTop=colBar._isTop
+    bar.style.display="flex"
+    bar.style.transform=isTop?"translateY(-120%)":"translateY(120%)"
+    bar.style.opacity="0"
+    bar.style.transition="transform .25s cubic-bezier(.4,0,.2,1),opacity .2s"
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      bar.style.transform=""; bar.style.opacity="1"
+      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" },260)
+    }))
+  }
 
   // ── 按钮工厂 ──
   function mkBtn(inner, tip){
@@ -153,7 +181,23 @@
   setOn(bMouse, true)
 
   // ── 收起/展开 ──
-  bToggle.onclick=()=>{ bar.style.display="none"; colBar.style.display="flex" }
+  bToggle.onclick=()=>{
+    // 判断吸边方向，向对应方向滑出
+    const r=bar.getBoundingClientRect()
+    const isTop=r.top < window.innerHeight/2
+    bar.style.transition="transform .25s cubic-bezier(.4,0,.2,1),opacity .2s"
+    bar.style.transform=isTop?"translateY(-120%)":"translateY(120%)"
+    bar.style.opacity="0"
+    setTimeout(()=>{
+      bar.style.display="none"; bar.style.transform=""; bar.style.opacity=""
+      bar.style.transition=""
+      // 收起条出现在同侧
+      colBar.style[isTop?"top":"bottom"]="16px"
+      colBar.style[isTop?"bottom":"top"]="auto"
+      colBar.style.display="flex"
+      colBar._isTop=isTop
+    },220)
+  }
 
   // ── 颜色面板 ──
   const cpanel=document.createElement("div")
