@@ -25,7 +25,8 @@
   vid.autoplay=vid.muted=vid.playsInline=true
   vid.style.cssText="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;pointer-events:none;"
   const rh=document.createElement("div")
-  rh.style.cssText="position:absolute;right:0;bottom:0;width:24px;height:24px;cursor:se-resize;z-index:10;"
+  rh.style.cssText="position:absolute;right:0;bottom:0;width:28px;height:28px;cursor:se-resize;z-index:10;display:flex;align-items:flex-end;justify-content:flex-end;padding:4px;"
+  rh.innerHTML=`<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="pointer-events:none;opacity:.7;"><path d="M2 10 L10 2M6 10 L10 6M10 10 L10 10" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`
   bubble.append(vid,rh)
   document.body.append(bubble)
 
@@ -51,32 +52,46 @@
     }
     applyShape()
   }
-  bubble.addEventListener("mousedown",e=>{
-    if(e.target===rh) return
-    isDragging=true
-    dragOffset={x:e.clientX-camPos.x, y:e.clientY-camPos.y}
-    bubble.style.cursor="grabbing"; e.preventDefault()
+  const EDGE = 12 // 边缘感应宽度 px
+
+  function onBubbleEdge(e) {
+    const r = bubble.getBoundingClientRect()
+    const x = e.clientX - r.left, y = e.clientY - r.top
+    return x < EDGE || y < EDGE || x > r.width - EDGE || y > r.height - EDGE
+  }
+
+  bubble.addEventListener("mousemove", e=>{
+    if(isDragging || isResizing) return
+    if(e.target === rh) { bubble.style.cursor="se-resize"; return }
+    bubble.style.cursor = onBubbleEdge(e) ? "grab" : "default"
   })
-  rh.addEventListener("mousedown",e=>{
-    isResizing=true
-    resizeStart={mx:e.clientX,my:e.clientY,w:camSize.w,h:camSize.h}
+  bubble.addEventListener("mouseleave", ()=>{
+    if(!isDragging) bubble.style.cursor="default"
+  })
+  bubble.addEventListener("mousedown", e=>{
+    if(e.target === rh) return // 交给 rh 处理
+    if(!onBubbleEdge(e)) return // 内部区域不拦截
+    isDragging = true
+    dragOffset = {x: e.clientX - camPos.x, y: e.clientY - camPos.y}
+    bubble.style.cursor = "grabbing"
+    e.preventDefault()
+  })
+  rh.addEventListener("mousedown", e=>{
+    isResizing = true
+    resizeStart = {mx: e.clientX, my: e.clientY, w: camSize.w, h: camSize.h}
     e.stopPropagation(); e.preventDefault()
   })
-  let camRaf=null
-  window.addEventListener("mousemove",e=>{
-    if(!isDragging&&!isResizing) return
-    if(isDragging){
-      camPos={x:e.clientX-dragOffset.x, y:e.clientY-dragOffset.y}
+  let camRaf = null
+  window.addEventListener("mousemove", e=>{
+    if(!isDragging && !isResizing) return
+    if(isDragging) camPos = {x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y}
+    if(isResizing) camSize = {
+      w: Math.max(80, Math.min(700, resizeStart.w + (e.clientX - resizeStart.mx))),
+      h: Math.max(60, Math.min(600, resizeStart.h + (e.clientY - resizeStart.my)))
     }
-    if(isResizing){
-      camSize={
-        w:Math.max(80,Math.min(700,resizeStart.w+(e.clientX-resizeStart.mx))),
-        h:Math.max(60,Math.min(600,resizeStart.h+(e.clientY-resizeStart.my)))
-      }
-    }
-    if(!camRaf) camRaf=requestAnimationFrame(()=>{ updateBubble(); camRaf=null })
+    if(!camRaf) camRaf = requestAnimationFrame(()=>{ updateBubble(); camRaf=null })
   })
-  window.addEventListener("mouseup",()=>{ isDragging=false; isResizing=false; bubble.style.cursor="grab" })
+  window.addEventListener("mouseup", ()=>{ isDragging=false; isResizing=false })
   let wheelRaf=null
   bubble.addEventListener("wheel",e=>{
     e.preventDefault()
