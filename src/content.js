@@ -142,22 +142,26 @@
   colBar.onclick=()=>{
     colBar.style.display="none"
     barAnchored="bottom"
-    // 回到底部居中，从右侧滑入
-    const bh = bar.getBoundingClientRect().height || 52
-    barLeft = Math.round((window.innerWidth - (bar.getBoundingClientRect().width||400)) / 2)
-    barTop  = Math.round(window.innerHeight - bh - 24)
-    bar.style.left = barLeft + "px"
-    bar.style.top  = barTop + "px"
-    bar.style.transform = "translateX(120%)"
-    bar.style.opacity = "0"
-    bar.style.display = "flex"
-    bar.style.transition = "none"
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      bar.style.transition = "transform .26s cubic-bezier(.34,1.3,.64,1), opacity .2s"
-      bar.style.transform = "none"
-      bar.style.opacity = "1"
-      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" }, 280)
-    }))
+    // 先显示（不可见），拿到真实宽高，再定位
+    bar.style.visibility="hidden"
+    bar.style.display="flex"
+    bar.style.transition="none"
+    requestAnimationFrame(()=>{
+      const r=bar.getBoundingClientRect()
+      barLeft = Math.round((window.innerWidth - r.width) / 2)
+      barTop  = Math.round(window.innerHeight - r.height - 24)
+      bar.style.left = barLeft + "px"
+      bar.style.top  = barTop + "px"
+      bar.style.transform = "translateX(120%)"
+      bar.style.opacity = "0"
+      bar.style.visibility = ""
+      requestAnimationFrame(()=>{
+        bar.style.transition = "transform .26s cubic-bezier(.34,1.3,.64,1), opacity .2s"
+        bar.style.transform = "none"
+        bar.style.opacity = "1"
+        setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" }, 280)
+      })
+    })
   }
 
   // ── 按钮工厂 ──
