@@ -83,26 +83,40 @@
   function sep(){ const d=document.createElement("div"); d.style.cssText="width:1px;height:20px;background:rgba(255,255,255,.08);margin:0 4px;flex-shrink:0;"; return d }
 
   const IC={
-    cam:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
-    mouse: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="16" rx="5"/><path d="M12 6v4"/></svg>`,
-    laser: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l5 5-11 11H4v-5L15 4z"/><circle cx="4.5" cy="19.5" r="1.5" fill="#FF3B30" stroke="none"/><path d="M19 2l3 3"/></svg>`,
-    rec:   `<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="#FF3B30"/></svg>`,
-    stop:  `<svg width="16" height="16" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3" fill="#fff"/></svg>`,
-    close: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+    // 摄像头：简洁圆角矩形+镜头圆
+    cam:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5A2.5 2.5 0 014.5 6h1.67L8 3.5h8L17.83 6H19.5A2.5 2.5 0 0122 8.5v9A2.5 2.5 0 0119.5 20h-15A2.5 2.5 0 012 17.5v-9z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+    // 鼠标：干净鼠标外形
+    mouse: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.69 2 6 4.69 6 8v8c0 3.31 2.69 6 6 6s6-2.69 6-6V8c0-3.31-2.69-6-6-6z"/><line x1="12" y1="7" x2="12" y2="11"/></svg>`,
+    // 激光笔：光线射出效果
+    laser: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l6-6"/><path d="M10.5 13.5L18 4"/><circle cx="5.5" cy="18.5" r="2" fill="#FF3B30" stroke="none"/><path d="M20 2l2 2M17 3l1.5 1.5M21 5l-1.5 1.5"/></svg>`,
+    // 停止：圆角方块
+    stop:  `<svg width="15" height="15" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="#fff"/></svg>`,
+    // 关闭
+    close: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
   }
 
   const bCam   = mkBtn(IC.cam,   "摄像头 C")
   const bMouse = mkBtn(IC.mouse, "鼠标 M")
   const bLaser = mkBtn(IC.laser, "激光笔 L")
-  const cdot   = document.createElement("div")
+
+  const cdot = document.createElement("div")
   cdot.style.cssText=`width:16px;height:16px;border-radius:50%;background:${laserColor};border:2px solid rgba(255,255,255,.3);cursor:pointer;flex-shrink:0;margin-left:2px;transition:transform .15s;`
   cdot.title="激光颜色"
   cdot.onmouseenter=()=>cdot.style.transform="scale(1.2)"
   cdot.onmouseleave=()=>cdot.style.transform="scale(1)"
-  const bRec   = mkBtn(IC.rec,   "录制 R")
-  const timerEl= document.createElement("div")
+
+  // 录制按钮：红点 + "录制"文字
+  const bRec = document.createElement("button")
+  bRec.title="录制 R"
+  bRec.style.cssText="height:36px;padding:0 12px;border-radius:12px;border:none;background:rgba(255,59,48,.15);cursor:pointer;display:flex;align-items:center;gap:7px;flex-shrink:0;transition:background .15s;"
+  bRec.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FF3B30"/></svg><span style="font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;">录制</span>`
+  bRec.onmouseenter=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.25)" }
+  bRec.onmouseleave=()=>{ if(!bRec._rec) bRec.style.background="rgba(255,59,48,.15)" }
+
+  const timerEl = document.createElement("div")
   timerEl.style.cssText="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);font-variant-numeric:tabular-nums;letter-spacing:.5px;min-width:34px;text-align:center;"
   timerEl.textContent="00:00"
+
   const bClose = mkBtn(IC.close, "关闭 Esc")
 
   bar.append(bCam, sep(), bMouse, bLaser, cdot, sep(), bRec, timerEl, sep(), bClose)
@@ -196,7 +210,8 @@
         exportPanel(blob)
       }
       recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
-      bRec.innerHTML=IC.stop; bRec.style.background="rgba(255,59,48,.15)"
+      bRec.innerHTML=`<svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="3" fill="#fff"/></svg><span style="font-size:13px;font-weight:600;color:#fff;">停止</span>`
+      bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
       recTimer=setInterval(()=>{ recSecs++; timerEl.textContent=fmt(recSecs) },1000)
       ss.getVideoTracks()[0].onended=stopRec
@@ -206,7 +221,8 @@
   function stopRec(){
     if(!recOn)return; recOn=false; clearInterval(recTimer)
     if(recorder?.state!=="inactive")recorder.stop()
-    bRec.innerHTML=IC.rec; bRec.style.background="transparent"
+    bRec.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FF3B30"/></svg><span style="font-size:13px;font-weight:600;color:#fff;letter-spacing:.2px;">录制</span>`
+    bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
     timerEl.style.color="rgba(255,255,255,.8)"; timerEl.textContent="00:00"; recSecs=0
   }
 
