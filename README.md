@@ -1,5 +1,7 @@
 # ShowAndTell Chrome Extension
 
+🌐 **落地页**：https://aifin.xiaohongshu.com/rfphecda/aiworkbench/query/query_dashboard?dashboardId=550D7D8E04EC0ECC60215B780EE590CC
+
 > 激光笔 · 摄像头 · 录制 · 悬浮工具栏  
 > 注入任意网页，点图标即用，无需配置
 
