@@ -1,0 +1,436 @@
+/* ShowAndTell Extension — Global Styles */
+
+#sat-toolbar {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 15, 15, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 24px;
+  padding: 6px 8px;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.3),
+    0 8px 40px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 2147483647;
+  pointer-events: all;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 模式切换胶囊 */
+#sat-mode-pill {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 3px;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.sat-pill-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 13px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+}
+
+.sat-pill-btn.active {
+  background: #fff;
+  color: #111;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.sat-pill-btn:not(.active):hover {
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.08);
+}
+
+/* 分隔线 */
+.sat-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* 工具按钮 */
+.sat-tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sat-tool-btn svg {
+  transition: all 0.15s;
+}
+
+.sat-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sat-tool-btn.active {
+  background: rgba(255, 214, 0, 0.15);
+}
+
+.sat-tool-btn.active svg {
+  filter: drop-shadow(0 0 6px rgba(255, 214, 0, 0.6));
+}
+
+/* 颜色圆点 */
+#sat-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.25);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  margin: 0 6px;
+}
+
+#sat-color-dot:hover {
+  border-color: rgba(255,255,255,0.6);
+  transform: scale(1.1);
+}
+
+/* 录制按钮 */
+#sat-record-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  background: rgba(255, 59, 48, 0.15);
+}
+
+#sat-record-btn:hover {
+  background: rgba(255, 59, 48, 0.25);
+}
+
+#sat-record-btn.recording {
+  background: #FF3B30;
+  box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.25);
+  animation: sat-record-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sat-record-pulse {
+  0%, 100% { box-shadow: 0 0 0 0px rgba(255, 59, 48, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
+}
+
+/* 计时器 */
+#sat-timer {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  min-width: 38px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+/* 关闭按钮 */
+#sat-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  margin-left: 2px;
+}
+
+#sat-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 浮动面板 */
+.sat-float-panel {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  background: rgba(18, 18, 18, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.3),
+    0 20px 60px rgba(0,0,0,0.5);
+  pointer-events: all;
+  z-index: 2147483647;
+}
+
+/* 颜色面板 */
+#sat-color-panel {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 176px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.sat-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+  transition: all 0.15s;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
+}
+
+.sat-color-swatch:hover {
+  transform: scale(1.2);
+}
+
+.sat-color-swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.5), inset 0 0 0 1px rgba(0,0,0,0.15);
+}
+
+.sat-slider-row {
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.sat-slider-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.sat-slider-label span:first-child {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 500;
+}
+
+.sat-slider-label span:last-child {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 600;
+}
+
+.sat-slider-row input[type=range] {
+  width: 100%;
+  accent-color: #FFD600;
+  cursor: pointer;
+}
+
+/* 美颜面板 */
+#sat-beauty-panel {
+  right: 0;
+  width: 210px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#sat-beauty-panel .sat-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 10px;
+  letter-spacing: 0.3px;
+}
+
+/* 摄像框 */
+#sat-camera-bubble {
+  position: fixed;
+  right: 28px;
+  bottom: 96px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,0.9),
+    0 8px 32px rgba(0,0,0,0.4);
+  cursor: grab;
+  z-index: 2147483645;
+  background: #111;
+  display: none;
+  pointer-events: all;
+  transition: box-shadow 0.2s;
+}
+
+#sat-camera-bubble:hover {
+  box-shadow:
+    0 0 0 3px #FFD600,
+    0 8px 32px rgba(0,0,0,0.4);
+}
+
+#sat-camera-bubble:active { cursor: grabbing; }
+
+#sat-camera-bubble video,
+#sat-camera-bubble canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  display: block;
+}
+
+#sat-cam-resize {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 18px;
+  height: 18px;
+  background: #FFD600;
+  border-radius: 50%;
+  cursor: se-resize;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 导出面板 */
+#sat-export-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15,15,15,0.97);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 24px;
+  padding: 32px;
+  width: 340px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 30px 80px rgba(0,0,0,0.7);
+  z-index: 2147483647;
+  pointer-events: all;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  color: #fff;
+}
+
+#sat-export-panel h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
+}
+
+#sat-export-panel .sat-export-meta {
+  font-size: 13px;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 24px;
+}
+
+#sat-export-panel .sat-export-status {
+  font-size: 13px;
+  color: #FFD600;
+  min-height: 18px;
+  margin-bottom: 10px;
+}
+
+#sat-export-panel .sat-progress-track {
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+#sat-export-panel .sat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #FFD600, #FF9500);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.sat-export-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: all 0.15s;
+  letter-spacing: -0.2px;
+}
+
+.sat-export-btn.primary {
+  background: #FFD600;
+  color: #111;
+}
+
+.sat-export-btn.primary:hover { filter: brightness(1.05); }
+.sat-export-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sat-export-btn.secondary {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.sat-export-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+.sat-export-btn.secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sat-export-btn.ghost {
+  background: transparent;
+  color: rgba(255,255,255,0.3);
+  font-size: 13px;
+  height: 36px;
+  margin-bottom: 0;
+}
+
+.sat-export-btn.ghost:hover { color: rgba(255,255,255,0.6); }
+
+/* 激光 canvas */
+#sat-laser-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 2147483641;
+  pointer-events: none;
+}
