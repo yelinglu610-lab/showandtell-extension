@@ -22,12 +22,44 @@
   const vid=document.createElement("video")
   vid.autoplay=vid.muted=vid.playsInline=true
   vid.style.cssText="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;pointer-events:none;"
+  // 形状切换按钮（圆形/圆角/方形）
+  const shapeBtn=document.createElement("div")
+  shapeBtn.style.cssText="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border-radius:8px;padding:3px 6px;cursor:pointer;z-index:10;display:flex;gap:4px;pointer-events:all;"
+  const SHAPES=["circle","rounded","square"]
+  const SHAPE_LABELS=["⬤","▢","■"]
+  let camShape="rounded"
+  SHAPES.forEach((s,i)=>{
+    const b=document.createElement("span")
+    b.textContent=SHAPE_LABELS[i]
+    b.style.cssText=`font-size:11px;color:${s===camShape?"#FFD600":"rgba(255,255,255,.5)"};cursor:pointer;transition:color .15s;`
+    b.onclick=e=>{
+      e.stopPropagation(); camShape=s
+      shapeBtn.querySelectorAll("span").forEach((sp,j)=>sp.style.color=SHAPES[j]===s?"#FFD600":"rgba(255,255,255,.5)")
+      applyShape()
+    }
+    shapeBtn.append(b)
+  })
+
   const rh=document.createElement("div")
-  rh.style.cssText="position:absolute;right:4px;bottom:4px;width:14px;height:14px;border-radius:3px;background:#FFD600;cursor:se-resize;z-index:5;"
-  bubble.append(vid,rh)
+  rh.style.cssText="position:absolute;right:4px;bottom:4px;width:14px;height:14px;border-radius:3px;background:#FFD600;cursor:se-resize;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,.4);"
+  bubble.append(vid, shapeBtn, rh)
   document.body.append(bubble)
 
-  // 拖动（照搬 CameraBubble.tsx dragOffset 方式）
+  function applyShape(){
+    if(camShape==="circle"){
+      const d=Math.min(camSize.w,camSize.h)
+      bubble.style.borderRadius="50%"
+      bubble.style.width=d+"px"; bubble.style.height=d+"px"
+    } else if(camShape==="rounded"){
+      bubble.style.borderRadius="20px"
+      bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
+    } else {
+      bubble.style.borderRadius="6px"
+      bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
+    }
+  }
+
+  // 拖动：记录鼠标按下时相对于气泡左上角的偏移
   let camPos={x:window.innerWidth-228, y:window.innerHeight-246}
   let camSize={w:200,h:150}
   let isDragging=false, isResizing=false, dragOffset={x:0,y:0}
@@ -35,17 +67,32 @@
   function updateBubble(){
     bubble.style.left=camPos.x+"px"; bubble.style.top=camPos.y+"px"
     bubble.style.right="auto"; bubble.style.bottom="auto"
-    bubble.style.width=camSize.w+"px"; bubble.style.height=camSize.h+"px"
+    applyShape()
   }
 
   bubble.addEventListener("mousedown",e=>{
-    if(e.target===rh){ isResizing=true; e.stopPropagation() }
-    else { isDragging=true; dragOffset={x:e.clientX-camPos.x, y:e.clientY-camPos.y}; bubble.style.cursor="grabbing" }
+    if(e.target===rh||shapeBtn.contains(e.target)) return
+    isDragging=true
+    // 关键：记录鼠标相对于气泡左上角的偏移，不用 getBoundingClientRect
+    dragOffset={x:e.clientX-camPos.x, y:e.clientY-camPos.y}
+    bubble.style.cursor="grabbing"
     e.preventDefault()
   })
+  rh.addEventListener("mousedown",e=>{
+    isResizing=true; e.stopPropagation(); e.preventDefault()
+  })
   window.addEventListener("mousemove",e=>{
-    if(isDragging){ camPos={x:e.clientX-dragOffset.x, y:e.clientY-dragOffset.y}; updateBubble() }
-    if(isResizing){ camSize={w:Math.max(80,Math.min(600,e.clientX-camPos.x)), h:Math.max(60,Math.min(500,e.clientY-camPos.y))}; updateBubble() }
+    if(isDragging){
+      camPos={x:e.clientX-dragOffset.x, y:e.clientY-dragOffset.y}
+      updateBubble()
+    }
+    if(isResizing){
+      camSize={
+        w:Math.max(80,Math.min(600,e.clientX-camPos.x)),
+        h:Math.max(60,Math.min(500,e.clientY-camPos.y))
+      }
+      updateBubble()
+    }
   })
   window.addEventListener("mouseup",()=>{ isDragging=false; isResizing=false; bubble.style.cursor="grab" })
   bubble.addEventListener("wheel",e=>{
@@ -191,7 +238,7 @@
     try{
       camStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false})
       vid.srcObject=camStream
-      updateBubble()
+      updateBubble(); applyShape()
       bubble.style.display="block"; camOn=true; glow(bCam,true)
     }catch(e){ alert("摄像头失败："+e.message) }
   }
