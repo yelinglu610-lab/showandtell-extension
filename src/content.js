@@ -402,7 +402,9 @@
       recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
       bRec.innerHTML=img("23f9",18)+"停止"; bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
+      // 计时由 background 驱动（跨标签同步），本地也保留备用
       recTimer=setInterval(()=>{recSecs++;timerEl.textContent=fmt(recSecs)},1000)
+      chrome.runtime.sendMessage({ type: "REC_START" })
       ss.getVideoTracks()[0].onended=stopRec
     }catch(e){console.error(e)}
   }
@@ -411,6 +413,7 @@
     if(recorder?.state!=="inactive")recorder.stop()
     bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
     timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
+    chrome.runtime.sendMessage({ type: "REC_STOP" })
   }
   function exportPanel(blob){
     const p=document.createElement("div")
@@ -453,6 +456,59 @@
   })
   addEventListener("resize",()=>{ lc.width=innerWidth; lc.height=innerHeight })
 
-  window.__SAT__={ toggle:()=> shown?hideAll():showAll() }
-  showAll()
+  // ── 状态持久化 ──
+  function saveState() {
+    chrome.runtime.sendMessage({ type: "SAVE_STATE", data: {
+      barLeft, barTop,
+      collapsed: colBar.style.display !== "none"
+    }})
+  }
+
+  // ── 跨标签消息监听 ──
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type === "REC_TICK") {
+      recSecs = msg.secs
+      timerEl.textContent = fmt(recSecs)
+    }
+    if (msg.type === "REC_RESTORE") {
+      // 录制仍在进行，恢复 UI 状态
+      recOn = true; recSecs = msg.secs
+      bRec.innerHTML = img("23f9",18)+"停止"
+      bRec._rec = true; bRec.style.background = "rgba(255,59,48,.9)"
+      timerEl.style.color = "#FF3B30"
+      timerEl.textContent = fmt(recSecs)
+    }
+  })
+
+  // ── 启动：读取上次状态 ──
+  chrome.runtime.sendMessage({ type: "GET_STATE" }, (state) => {
+    if (!state) { showAll(); return }
+    // 恢复位置
+    if (state.barLeft != null && state.barTop != null) {
+      barLeft = state.barLeft; barTop = state.barTop
+      bar.style.left = barLeft + "px"; bar.style.top = barTop + "px"
+    }
+    // 恢复最小化
+    if (state.collapsed) {
+      bar.style.display = "none"
+      colBar.style.display = "flex"
+    } else {
+      showAll()
+    }
+  })
+
+  // 保存位置（mouseup 时）
+  window.addEventListener("mouseup", () => {
+    if (barDrag) saveState()
+  }, true)
+  // 保存收起状态
+  const _origToggle = bToggle.onclick
+  bToggle.onclick = () => { _origToggle?.(); setTimeout(saveState, 250) }
+  colBar.onclick = (() => {
+    const orig = colBar.onclick
+    return () => { orig?.(); setTimeout(saveState, 300) }
+  })()
+
+  window.__SAT__ = { toggle: () => shown ? hideAll() : showAll() }
 })()
+
