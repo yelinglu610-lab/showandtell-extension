@@ -111,15 +111,16 @@
   bar.style.cssText="position:fixed;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
   document.body.append(bar)
 
-  // 初始化位置
-  requestAnimationFrame(()=>{
+  // 初始化位置（等 DOM 渲染完拿到真实宽度）
+  function initBarPos() {
     const r = bar.getBoundingClientRect()
     barW = r.width
     barLeft = Math.round((window.innerWidth - barW) / 2)
     barTop  = Math.round(window.innerHeight - r.height - 24)
     bar.style.left = barLeft + "px"
     bar.style.top  = barTop  + "px"
-  })
+  }
+  requestAnimationFrame(initBarPos)
 
   bar.addEventListener("mousedown", e=>{
     if (e.target.closest("button") || e.target.closest("input")) return
@@ -384,64 +385,49 @@
     }
   }
 
-  // ── 录制（由 background 管理，跨页面跳转不中断）──
+  // ── 录制 ──
   function fmt(s){return`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`}
-
-  function setRecUI(on){
-    recOn=on
-    if(on){
+  async function startRec(){
+    try{
+      const ss=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:true})
+      let ms=null; try{ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}catch{}
+      const tracks=[...ss.getTracks()]; if(ms)tracks.push(...ms.getAudioTracks())
+      chunks=[]; recorder=new MediaRecorder(new MediaStream(tracks),{mimeType:"video/webm;codecs=vp9"})
+      recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)}
+      recorder.onstop=()=>{
+        const blob=new Blob(chunks,{type:"video/webm"})
+        ss.getTracks().forEach(t=>t.stop()); if(ms)ms.getTracks().forEach(t=>t.stop())
+        exportPanel(blob)
+      }
+      recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
       bRec.innerHTML=img("23f9",18)+"停止"; bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
-    } else {
-      bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
-      timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
-    }
-  }
-
-  function startRec(){
-    chrome.runtime.sendMessage({ type: "REC_START" })
-    setRecUI(true); recSecs=0; timerEl.textContent="00:00"
+      recTimer=setInterval(()=>{recSecs++;timerEl.textContent=fmt(recSecs)},1000)
+      ss.getVideoTracks()[0].onended=stopRec
+    }catch(e){console.error(e)}
   }
   function stopRec(){
-    if(!recOn) return
-    chrome.runtime.sendMessage({ type: "REC_STOP" })
-    setRecUI(false)
+    if(!recOn)return; recOn=false; clearInterval(recTimer)
+    if(recorder?.state!=="inactive")recorder.stop()
+    bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
+    timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
   }
-
-  function exportPanel(blobUrl, secs){
+  function exportPanel(blob){
     const p=document.createElement("div")
     p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:300px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
-    p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(secs)}</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
+    p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
     p.querySelector("#sat-dl").onclick=()=>{
-      const a=document.createElement("a")
-      a.href=blobUrl; a.download=`showandtell-${Date.now()}.webm`
-      document.body.append(a); a.click(); a.remove(); p.remove()
+      const u=URL.createObjectURL(blob),a=document.createElement("a")
+      a.href=u;a.download=`showandtell-${Date.now()}.webm`;document.body.append(a);a.click();a.remove()
+      setTimeout(()=>URL.revokeObjectURL(u),3e3); p.remove()
     }
     p.querySelector("#sat-cls").onclick=()=>p.remove()
   }
 
-  // 接收 background 消息
-  chrome.runtime.onMessage.addListener((msg)=>{
-    if(msg.type==="REC_TICK"){ recSecs=msg.secs; timerEl.textContent=fmt(recSecs) }
-    if(msg.type==="REC_SYNC"){ setRecUI(true); recSecs=msg.secs; timerEl.textContent=fmt(recSecs) }
-    if(msg.type==="REC_DONE"){ setRecUI(false); exportPanel(msg.url, msg.secs) }
-    if(msg.type==="REC_ERROR"){ setRecUI(false); console.error("SAT rec:",msg.msg) }
-  })
-
-  // 初始化时同步录制状态
-  chrome.runtime.sendMessage({ type: "REC_STATUS" }, (res)=>{
-    if(res?.on){ setRecUI(true); recSecs=res.secs; timerEl.textContent=fmt(recSecs) }
-  })
-
   // ── 显示/隐藏 ──
   function showAll(){ shown=true; bar.style.display="flex"; if(camOn)bubble.style.display="block" }
-  function hideAll(){
-    shown=false; bar.style.display="none"; colBar.style.display="none"; bubble.style.display="none"
-    setLaser(false); stopCam(); if(recOn)stopRec(); hideCp(); hideSp()
-    // 通知 background：用户主动关闭，不要再自动注入
-    chrome.runtime.sendMessage({ type: "SAT_CLOSED" })
-  }
+  function hideAll(){ shown=false; bar.style.display="none"; colBar.style.display="none"; bubble.style.display="none"; setLaser(false); stopCam(); if(recOn)stopRec(); hideCp(); hideSp() }
 
   // ── 事件绑定 ──
   bCam.onclick   = ()=> camOn?stopCam():startCam()
@@ -467,60 +453,6 @@
   })
   addEventListener("resize",()=>{ lc.width=innerWidth; lc.height=innerHeight })
 
-  // ── 状态持久化 ──
-  function saveState() {
-    chrome.runtime.sendMessage({ type: "SAVE_STATE", data: {
-      barLeft, barTop,
-      collapsed: colBar.style.display !== "none"
-    }})
-  }
-
-  // ── 跨标签消息监听 ──
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === "REC_TICK") {
-      recSecs = msg.secs
-      timerEl.textContent = fmt(recSecs)
-    }
-    if (msg.type === "REC_RESTORE") {
-      // 录制仍在进行，恢复 UI 状态
-      recOn = true; recSecs = msg.secs
-      bRec.innerHTML = img("23f9",18)+"停止"
-      bRec._rec = true; bRec.style.background = "rgba(255,59,48,.9)"
-      timerEl.style.color = "#FF3B30"
-      timerEl.textContent = fmt(recSecs)
-    }
-  })
-
-  // ── 启动：读取上次状态 ──
-  chrome.runtime.sendMessage({ type: "GET_STATE" }, (state) => {
-    if (!state) { bar.style.visibility=""; showAll(); return }
-    // 恢复位置
-    if (state.barLeft != null && state.barTop != null) {
-      barLeft = state.barLeft; barTop = state.barTop
-      bar.style.left = barLeft + "px"; bar.style.top = barTop + "px"
-    }
-    bar.style.visibility = "" // 位置确定后再显示，不跳动
-    // 恢复最小化
-    if (state.collapsed) {
-      bar.style.display = "none"
-      colBar.style.display = "flex"
-    } else {
-      showAll()
-    }
-  })
-
-  // 保存位置（mouseup 时）
-  window.addEventListener("mouseup", () => {
-    if (barDrag) saveState()
-  }, true)
-  // 保存收起状态
-  const _origToggle = bToggle.onclick
-  bToggle.onclick = () => { _origToggle?.(); setTimeout(saveState, 250) }
-  colBar.onclick = (() => {
-    const orig = colBar.onclick
-    return () => { orig?.(); setTimeout(saveState, 300) }
-  })()
-
-  window.__SAT__ = { toggle: () => shown ? hideAll() : showAll() }
+  window.__SAT__={ toggle:()=> shown?hideAll():showAll() }
+  showAll()
 })()
-
