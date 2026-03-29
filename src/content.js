@@ -71,62 +71,96 @@
     updateBubble()
   },{passive:false})
 
-  // ── 工具栏外壳（可拖动） ──
+  // ── 工具栏 ──
   const bar=document.createElement("div")
   bar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
   document.body.append(bar)
 
-  // 工具栏拖动 — mousedown 时立即锁定当前像素位置，消除 transform/bottom 干扰
+  // 记录工具栏当前位置（像素，不用 transform）
+  let barX = window.innerWidth/2, barY = window.innerHeight - 24 - 25 // 初始底部居中
+  let barAnchored = "bottom" // "top" or "bottom"
+
+  function setBarPos(x, y) {
+    barX = x; barY = y
+    bar.style.left = x + "px"
+    bar.style.top  = y + "px"
+    bar.style.bottom = "auto"
+    bar.style.transform = "none"
+  }
+
+  // 初始化：把 transform 居中换成像素坐标
+  requestAnimationFrame(()=>{
+    const r = bar.getBoundingClientRect()
+    barX = r.left; barY = r.top
+    bar.style.left = barX+"px"; bar.style.top = barY+"px"
+    bar.style.bottom = "auto"; bar.style.transform = "none"
+  })
+
   let barDrag=false, barOff={x:0,y:0}
   bar.addEventListener("mousedown",e=>{
     if(e.target.closest("button")||e.target.closest("input")) return
-    // 先把 bottom/transform 换成 top/left 绝对值，防止拖动跳位
     const r=bar.getBoundingClientRect()
-    bar.style.left=r.left+"px"; bar.style.top=r.top+"px"
+    barX=r.left; barY=r.top
+    bar.style.left=barX+"px"; bar.style.top=barY+"px"
     bar.style.bottom="auto"; bar.style.transform="none"
     barDrag=true
-    barOff={x:e.clientX-r.left, y:e.clientY-r.top}
+    barOff={x:e.clientX-barX, y:e.clientY-barY}
     bar.style.cursor="grabbing"; e.preventDefault()
   })
   window.addEventListener("mousemove",e=>{
     if(!barDrag) return
-    bar.style.left=(e.clientX-barOff.x)+"px"
-    bar.style.top=(e.clientY-barOff.y)+"px"
+    barX=e.clientX-barOff.x; barY=e.clientY-barOff.y
+    bar.style.left=barX+"px"; bar.style.top=barY+"px"
   })
   window.addEventListener("mouseup",()=>{
-    if(barDrag){
-      barDrag=false; bar.style.cursor="grab"
-      // 松手时吸边：判断 bar 中心在上半还是下半屏
-      const r=bar.getBoundingClientRect()
-      const barCY=r.top+r.height/2
-      bar.style.transition="top .25s cubic-bezier(.4,0,.2,1),bottom .25s cubic-bezier(.4,0,.2,1)"
-      if(barCY < window.innerHeight/2){
-        // 上半屏 → 吸顶
-        bar.style.top="16px"; bar.style.bottom="auto"
-      } else {
-        // 下半屏 → 吸底
-        bar.style.top="auto"; bar.style.bottom="16px"
-        bar.style.left=r.left+"px"; bar.style.transform="none"
-      }
-      setTimeout(()=>bar.style.transition="",300)
+    if(!barDrag) return
+    barDrag=false; bar.style.cursor="grab"
+    // 松手吸边：bar 中心在上半 → 吸顶，下半 → 吸底
+    const r=bar.getBoundingClientRect()
+    const cy=r.top+r.height/2
+    bar.style.transition="top .22s ease,bottom .22s ease"
+    if(cy < window.innerHeight/2){
+      barAnchored="top"
+      barY=16; bar.style.top="16px"; bar.style.bottom="auto"
+    } else {
+      barAnchored="bottom"
+      barY=window.innerHeight-r.height-16
+      bar.style.top=barY+"px"; bar.style.bottom="auto"
     }
+    setTimeout(()=>bar.style.transition="",250)
   })
 
   // ── 收起条 ──
   const colBar=document.createElement("div")
-  colBar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:6px 20px;display:none;align-items:center;gap:6px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
-  colBar.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg><span style="font-size:11px;color:rgba(255,255,255,.3);">ShowAndTell</span>`
+  colBar.style.cssText="position:fixed;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 18px;display:none;align-items:center;gap:6px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
+  colBar.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.5" stroke-linecap="round" id="colArrow"><path d="M6 9l6 6 6-6"/></svg><span style="font-size:11px;color:rgba(255,255,255,.3);">ShowAndTell</span>`
   document.body.append(colBar)
+
+  function snapColBar(){
+    // 收起条跟工具栏同侧
+    if(barAnchored==="top"){
+      colBar.style.top="16px"; colBar.style.bottom="auto"
+      colBar.querySelector("#colArrow").querySelector("path").setAttribute("d","M6 15l6-6 6 6") // 箭头朝上
+    } else {
+      colBar.style.bottom="16px"; colBar.style.top="auto"
+      colBar.querySelector("#colArrow").querySelector("path").setAttribute("d","M6 9l6 6 6-6") // 箭头朝下
+    }
+    // 水平位置跟随工具栏
+    const r=bar.getBoundingClientRect()
+    const cx=barX+r.width/2
+    colBar.style.left=cx+"px"
+  }
+
   colBar.onclick=()=>{
     colBar.style.display="none"
-    const isTop=colBar._isTop
     bar.style.display="flex"
-    bar.style.transform=isTop?"translateY(-120%)":"translateY(120%)"
-    bar.style.opacity="0"
-    bar.style.transition="transform .25s cubic-bezier(.4,0,.2,1),opacity .2s"
+    // 从外侧滑入
+    const from=barAnchored==="top"?"translateY(-80px)":"translateY(80px)"
+    bar.style.transform=from; bar.style.opacity="0"
+    bar.style.transition="transform .22s ease,opacity .18s"
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      bar.style.transform=""; bar.style.opacity="1"
-      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" },260)
+      bar.style.transform="none"; bar.style.opacity="1"
+      setTimeout(()=>{ bar.style.transition="" },240)
     }))
   }
 
@@ -182,20 +216,14 @@
 
   // ── 收起/展开 ──
   bToggle.onclick=()=>{
-    // 判断吸边方向，向对应方向滑出
-    const r=bar.getBoundingClientRect()
-    const isTop=r.top < window.innerHeight/2
-    bar.style.transition="transform .25s cubic-bezier(.4,0,.2,1),opacity .2s"
-    bar.style.transform=isTop?"translateY(-120%)":"translateY(120%)"
-    bar.style.opacity="0"
+    snapColBar()
+    const to=barAnchored==="top"?"translateY(-80px)":"translateY(80px)"
+    bar.style.transition="transform .22s ease,opacity .18s"
+    bar.style.transform=to; bar.style.opacity="0"
     setTimeout(()=>{
-      bar.style.display="none"; bar.style.transform=""; bar.style.opacity=""
+      bar.style.display="none"; bar.style.transform="none"; bar.style.opacity=""
       bar.style.transition=""
-      // 收起条出现在同侧
-      colBar.style[isTop?"top":"bottom"]="16px"
-      colBar.style[isTop?"bottom":"top"]="auto"
       colBar.style.display="flex"
-      colBar._isTop=isTop
     },220)
   }
 
