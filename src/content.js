@@ -436,7 +436,12 @@
 
   // ── 显示/隐藏 ──
   function showAll(){ shown=true; bar.style.display="flex"; if(camOn)bubble.style.display="block" }
-  function hideAll(){ shown=false; bar.style.display="none"; colBar.style.display="none"; bubble.style.display="none"; setLaser(false); stopCam(); if(recOn)stopRec(); hideCp(); hideSp() }
+  function hideAll(){
+    shown=false; bar.style.display="none"; colBar.style.display="none"; bubble.style.display="none"
+    setLaser(false); stopCam(); if(recOn)stopRec(); hideCp(); hideSp()
+    // 通知 background：用户主动关闭，不要再自动注入
+    chrome.runtime.sendMessage({ type: "SAT_CLOSED" })
+  }
 
   // ── 事件绑定 ──
   bCam.onclick   = ()=> camOn?stopCam():startCam()
