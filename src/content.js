@@ -213,44 +213,24 @@
   // ── 导出面板 ──────────────────────────────────────────
   function exportPanel(blob){
     const p=document.createElement("div")
-    p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:340px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
+    p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:320px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
     const mb=(blob.size/1024/1024).toFixed(1)
+    const sec=recSecs, dur=fmt(sec)
     p.innerHTML=`
       <div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${mb} MB</div>
-      <div id="est" style="font-size:13px;color:#FFD600;min-height:18px;margin-bottom:8px;"></div>
-      <div id="etr" style="height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin-bottom:24px;display:none;overflow:hidden;"><div id="ebar" style="height:100%;width:0%;background:linear-gradient(90deg,#FFD600,#FF9500);border-radius:2px;transition:width .3s;"></div></div>
-      <button id="emp4" style="width:100%;height:50px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">转换并下载 mp4</button>
-      <button id="ewbm" style="width:100%;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">直接下载 webm</button>
+      <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:28px;">${dur} · ${mb} MB</div>
+      <button id="edl" style="width:100%;height:50px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button>
       <button id="ecls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>
     `
     document.body.append(p)
-    function dl(b,ext){ const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=`sat-${Date.now()}.${ext}`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3e3) }
-    p.querySelector("#ewbm").onclick=()=>{ dl(blob,"webm"); p.remove() }
-    p.querySelector("#ecls").onclick=()=>p.remove()
-    p.querySelector("#emp4").onclick=async()=>{
-      const st=p.querySelector("#est"),tr=p.querySelector("#etr"),bar=p.querySelector("#ebar")
-      const m4=p.querySelector("#emp4"),wb=p.querySelector("#ewbm")
-      m4.disabled=true; wb.disabled=true; m4.style.opacity=".45"
-      st.textContent="加载 FFmpeg..."; tr.style.display="block"; bar.style.width="8%"
-      try{
-        const {FFmpeg}=await import("https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js")
-        const {fetchFile,toBlobURL}=await import("https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js")
-        const ff=new FFmpeg()
-        ff.on("progress",({progress})=>{ bar.style.width=Math.round(10+progress*82)+"%"; st.textContent=`转换中 ${Math.round(progress*100)}%` })
-        const base="https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm"
-        await ff.load({coreURL:await toBlobURL(`${base}/ffmpeg-core.js`,"text/javascript"),wasmURL:await toBlobURL(`${base}/ffmpeg-core.wasm`,"application/wasm")})
-        bar.style.width="18%"; st.textContent="处理中..."
-        await ff.writeFile("in.webm",await fetchFile(blob))
-        await ff.exec(["-i","in.webm","-c:v","libx264","-crf","22","-preset","fast","-c:a","aac","-b:a","128k","-movflags","+faststart","out.mp4"])
-        bar.style.width="96%"; st.textContent="下载中..."
-        dl(new Blob([(await ff.readFile("out.mp4")).buffer],{type:"video/mp4"}),"mp4")
-        bar.style.width="100%"; setTimeout(()=>p.remove(),1200)
-      }catch(e){
-        st.textContent="转换失败，下载 webm"; st.style.color="#FF3B30"
-        dl(blob,"webm"); m4.disabled=false; wb.disabled=false; m4.style.opacity="1"
-      }
+    p.querySelector("#edl").onclick=()=>{
+      const u=URL.createObjectURL(blob),a=document.createElement("a")
+      a.href=u; a.download=`showandtell-${Date.now()}.webm`
+      document.body.append(a); a.click(); a.remove()
+      setTimeout(()=>URL.revokeObjectURL(u),3e3)
+      p.remove()
     }
+    p.querySelector("#ecls").onclick=()=>p.remove()
   }
 
   // ── 显示/隐藏 ─────────────────────────────────────────
