@@ -133,8 +133,13 @@
 
   // ── 收起胶囊（右下角） ──
   const colBar=document.createElement("div")
-  colBar.style.cssText="position:fixed;right:0;bottom:40px;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:12px 0 0 12px;padding:10px 8px;display:none;flex-direction:column;align-items:center;gap:4px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;"
-  colBar.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font-size:10px;color:rgba(255,255,255,.35);writing-mode:vertical-rl;letter-spacing:1px;">SAT</span>`
+  colBar.style.cssText="position:fixed;right:0;bottom:80px;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-right:none;border-radius:12px 0 0 12px;padding:14px 10px;display:none;flex-direction:column;align-items:center;gap:6px;z-index:2147483647;pointer-events:all;cursor:pointer;font-family:-apple-system,sans-serif;box-shadow:-4px 0 24px rgba(0,0,0,.4);"
+  colBar.innerHTML=`
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+    <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.6);writing-mode:vertical-rl;text-orientation:mixed;letter-spacing:2px;line-height:1;">ShowAndTell</span>
+  `
   document.body.append(colBar)
 
   colBar.onclick=()=>{
