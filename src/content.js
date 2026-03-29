@@ -44,10 +44,15 @@
   }
   bubble.addEventListener("mousedown",e=>{
     if(e.target===rh) return
-    isDragging=true; dragOffset={x:e.clientX-camPos.x,y:e.clientY-camPos.y}
+    // 从 DOM 实际位置同步，防止 camPos 与实际渲染位置不一致
+    const r=bubble.getBoundingClientRect()
+    camPos={x:r.left, y:r.top}
+    isDragging=true; dragOffset={x:e.clientX-r.left, y:e.clientY-r.top}
     bubble.style.cursor="grabbing"; e.preventDefault()
   })
   rh.addEventListener("mousedown",e=>{
+    const r=bubble.getBoundingClientRect()
+    camPos={x:r.left, y:r.top}; camSize={w:r.width, h:r.height}
     isResizing=true; resizeStart={mx:e.clientX,my:e.clientY,w:camSize.w,h:camSize.h}
     e.stopPropagation(); e.preventDefault()
   })
@@ -71,19 +76,22 @@
   bar.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
   document.body.append(bar)
 
-  // 工具栏拖动
+  // 工具栏拖动 — mousedown 时立即锁定当前像素位置，消除 transform/bottom 干扰
   let barDrag=false, barOff={x:0,y:0}
   bar.addEventListener("mousedown",e=>{
     if(e.target.closest("button")||e.target.closest("input")) return
+    // 先把 bottom/transform 换成 top/left 绝对值，防止拖动跳位
+    const r=bar.getBoundingClientRect()
+    bar.style.left=r.left+"px"; bar.style.top=r.top+"px"
+    bar.style.bottom="auto"; bar.style.transform="none"
     barDrag=true
-    barOff={x:e.clientX-bar.getBoundingClientRect().left, y:e.clientY-bar.getBoundingClientRect().top}
+    barOff={x:e.clientX-r.left, y:e.clientY-r.top}
     bar.style.cursor="grabbing"; e.preventDefault()
   })
   window.addEventListener("mousemove",e=>{
     if(!barDrag) return
     bar.style.left=(e.clientX-barOff.x)+"px"
     bar.style.top=(e.clientY-barOff.y)+"px"
-    bar.style.bottom="auto"; bar.style.transform="none"
   })
   window.addEventListener("mouseup",()=>{ barDrag=false; bar.style.cursor="grab" })
 
