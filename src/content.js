@@ -132,35 +132,38 @@
   document.body.append(colBar)
 
   function snapColBar(){
-    // 收起条跟工具栏同侧
+    const r = bar.getBoundingClientRect()
+    // 水平居中跟随工具栏
+    colBar.style.left = (r.left + r.width/2) + "px"
+    colBar.style.transform = "translateX(-50%)"
     if(barAnchored==="top"){
       colBar.style.top="16px"; colBar.style.bottom="auto"
-      colBar.querySelector("#colArrow").querySelector("path").setAttribute("d","M6 15l6-6 6 6") // 箭头朝上
+      colBar.querySelector("path").setAttribute("d","M6 15l6-6 6 6")
     } else {
       colBar.style.bottom="16px"; colBar.style.top="auto"
-      colBar.querySelector("#colArrow").querySelector("path").setAttribute("d","M6 9l6 6 6-6") // 箭头朝下
+      colBar.querySelector("path").setAttribute("d","M6 9l6 6 6-6")
     }
-    // 水平位置跟随工具栏
-    const r=bar.getBoundingClientRect()
-    const cx=barX+r.width/2
-    colBar.style.left=cx+"px"
   }
 
   colBar.onclick=()=>{
     colBar.style.display="none"
-    // 回到底部居中原位
+    // 展开回底部居中
     bar.style.left="50%"; bar.style.top="auto"
     bar.style.bottom="24px"; bar.style.transform="translateX(-50%)"
     bar.style.display="flex"
     bar.style.opacity="0"
-    bar.style.transform="translateY(20px) scale(0.96)"
-    bar.style.transition="opacity .22s ease, transform .22s cubic-bezier(.34,1.56,.64,1)"
+    bar.style.transition="opacity .22s ease"
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       bar.style.opacity="1"
-      bar.style.transform="none"
-      setTimeout(()=>bar.style.transition="",240)
+      setTimeout(()=>{ bar.style.transition=""; bar.style.opacity="" },240)
     }))
     barAnchored="bottom"
+    // 重新初始化拖动坐标
+    requestAnimationFrame(()=>{
+      const r=bar.getBoundingClientRect()
+      bar.style.left=r.left+"px"; bar.style.top=r.top+"px"
+      bar.style.bottom="auto"; bar.style.transform="none"
+    })
   }
 
   // ── 按钮工厂 ──
