@@ -23,7 +23,8 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
   if (info.status !== "complete") return
   if (!activatedTabs.has(tabId)) return
   if (!tab.url || tab.url.startsWith("chrome://")) return
-  inject(tabId)
+  // 延迟 300ms 等页面渲染完
+  setTimeout(() => inject(tabId), 300)
 })
 
 // tab 关闭时清理
