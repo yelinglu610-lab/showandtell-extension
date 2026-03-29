@@ -294,9 +294,17 @@
   // ── 激光笔 ──
   function setLaser(on){
     laserOn=on; setOn(bLaser,on); setOn(bMouse,!on)
-    lc.style.pointerEvents=on?"all":"none"
-    lc.style.cursor=on?"crosshair":"default"
-    if(on) startLaserRaf(); else stopLaserRaf()
+    if(on){
+      lc.style.pointerEvents="all"
+      lc.style.cursor="crosshair"
+      document.body.style.cursor="crosshair"
+      startLaserRaf()
+    } else {
+      lc.style.pointerEvents="none"
+      lc.style.cursor="none"
+      document.body.style.cursor=""
+      stopLaserRaf()
+    }
   }
   lc.addEventListener("mousedown",e=>{ drawing=true; trail=[{x:e.clientX,y:e.clientY,t:Date.now()}] })
   lc.addEventListener("mousemove",e=>{ if(drawing) trail.push({x:e.clientX,y:e.clientY,t:Date.now()}) })
