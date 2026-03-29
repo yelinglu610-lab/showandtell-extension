@@ -68,7 +68,7 @@
   // 美颜 canvas（叠在 video 上）
   bCanvas=document.createElement("canvas")
   bCanvas.style.cssText="position:absolute;top:0;left:0;width:100%;height:100%;display:none;pointer-events:none;"
-  bCtx=bCanvas.getContext("2d")
+  bCtx=bCanvas.getContext("2d", { willReadFrequently: true })
   // resize handle（右下角）
   const rh=document.createElement("div")
   rh.style.cssText="position:absolute;right:4px;bottom:4px;width:14px;height:14px;border-radius:3px;background:#FFD600;cursor:se-resize;z-index:5;box-shadow:0 1px 4px rgba(0,0,0,.4);"
