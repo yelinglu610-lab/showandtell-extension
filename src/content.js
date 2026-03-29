@@ -115,19 +115,10 @@
   window.addEventListener("mouseup",()=>{
     if(!barDrag) return
     barDrag=false; bar.style.cursor="grab"
-    // 松手吸边：bar 中心在上半 → 吸顶，下半 → 吸底
+    // 松手不吸边，停在原地
+    // 但更新 barAnchored 方向供收起时用
     const r=bar.getBoundingClientRect()
-    const cy=r.top+r.height/2
-    bar.style.transition="top .22s ease,bottom .22s ease"
-    if(cy < window.innerHeight/2){
-      barAnchored="top"
-      barY=16; bar.style.top="16px"; bar.style.bottom="auto"
-    } else {
-      barAnchored="bottom"
-      barY=window.innerHeight-r.height-16
-      bar.style.top=barY+"px"; bar.style.bottom="auto"
-    }
-    setTimeout(()=>bar.style.transition="",250)
+    barAnchored = (r.top+r.height/2) < window.innerHeight/2 ? "top" : "bottom"
   })
 
   // ── 收起条 ──
@@ -153,15 +144,17 @@
 
   colBar.onclick=()=>{
     colBar.style.display="none"
+    // 回到底部居中原位
+    bar.style.left="50%"; bar.style.top="auto"
+    bar.style.bottom="24px"; bar.style.transform="translateX(-50%)"
     bar.style.display="flex"
-    // 从外侧滑入
-    const from=barAnchored==="top"?"translateY(-80px)":"translateY(80px)"
-    bar.style.transform=from; bar.style.opacity="0"
-    bar.style.transition="transform .22s ease,opacity .18s"
+    bar.style.opacity="0"
+    bar.style.transition="opacity .2s"
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      bar.style.transform="none"; bar.style.opacity="1"
-      setTimeout(()=>{ bar.style.transition="" },240)
+      bar.style.opacity="1"
+      setTimeout(()=>bar.style.transition="",220)
     }))
+    barAnchored="bottom"
   }
 
   // ── 按钮工厂 ──
