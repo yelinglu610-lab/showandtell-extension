@@ -53,25 +53,28 @@
   }
   bubble.addEventListener("mousedown",e=>{
     if(e.target===rh) return
-    // 从 DOM 实际位置同步，防止 camPos 与实际渲染位置不一致
-    const r=bubble.getBoundingClientRect()
-    camPos={x:r.left, y:r.top}
-    isDragging=true; dragOffset={x:e.clientX-r.left, y:e.clientY-r.top}
+    isDragging=true
+    dragOffset={x:e.clientX-camPos.x, y:e.clientY-camPos.y}
     bubble.style.cursor="grabbing"; e.preventDefault()
   })
   rh.addEventListener("mousedown",e=>{
-    const r=bubble.getBoundingClientRect()
-    camPos={x:r.left, y:r.top}; camSize={w:r.width, h:r.height}
-    isResizing=true; resizeStart={mx:e.clientX,my:e.clientY,w:camSize.w,h:camSize.h}
+    isResizing=true
+    resizeStart={mx:e.clientX,my:e.clientY,w:camSize.w,h:camSize.h}
     e.stopPropagation(); e.preventDefault()
   })
+  let camRaf=null
   window.addEventListener("mousemove",e=>{
-    if(isDragging){ camPos={x:e.clientX-dragOffset.x,y:e.clientY-dragOffset.y}; updateBubble() }
-    if(isResizing){
-      camSize={w:Math.max(80,Math.min(700,resizeStart.w+(e.clientX-resizeStart.mx))),
-               h:Math.max(60,Math.min(600,resizeStart.h+(e.clientY-resizeStart.my)))}
-      updateBubble()
+    if(!isDragging&&!isResizing) return
+    if(isDragging){
+      camPos={x:e.clientX-dragOffset.x, y:e.clientY-dragOffset.y}
     }
+    if(isResizing){
+      camSize={
+        w:Math.max(80,Math.min(700,resizeStart.w+(e.clientX-resizeStart.mx))),
+        h:Math.max(60,Math.min(600,resizeStart.h+(e.clientY-resizeStart.my)))
+      }
+    }
+    if(!camRaf) camRaf=requestAnimationFrame(()=>{ updateBubble(); camRaf=null })
   })
   window.addEventListener("mouseup",()=>{ isDragging=false; isResizing=false; bubble.style.cursor="grab" })
   let wheelRaf=null
