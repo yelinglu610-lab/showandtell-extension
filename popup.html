@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(160deg, #FFD600 0%, #FFFDE7 60%);
+    padding: 24px 20px 20px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: #4E342E;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(78,52,46,0.25);
+  }
+
+  .logo-text h1 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #4E342E;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text p {
+    font-size: 11px;
+    color: #795548;
+    margin-top: 1px;
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .feature {
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #4E342E;
+    font-weight: 500;
+  }
+
+  .feature span { font-size: 15px; }
+
+  .url-section {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 2px 12px rgba(78,52,46,0.1);
+  }
+
+  .url-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #795548;
+    margin-bottom: 8px;
+  }
+
+  .url-input {
+    width: 100%;
+    height: 38px;
+    border-radius: 8px;
+    border: 1.5px solid #e0d5c8;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #4E342E;
+    background: #FFFDE7;
+    outline: none;
+    margin-bottom: 10px;
+  }
+
+  .url-input:focus {
+    border-color: #FFD600;
+  }
+
+  .start-btn {
+    width: 100%;
+    height: 40px;
+    background: #4E342E;
+    color: #FFD600;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .start-btn:hover { opacity: 0.88; }
+
+  .or-divider {
+    text-align: center;
+    font-size: 11px;
+    color: #aaa;
+    margin: 8px 0;
+  }
+
+  .current-btn {
+    width: 100%;
+    height: 36px;
+    background: transparent;
+    color: #795548;
+    border: 1.5px solid #e0d5c8;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .current-btn:hover { background: #FFFDE7; }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #795548;
+    margin-top: 14px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<div class="logo">
+  <div class="logo-icon">🎬</div>
+  <div class="logo-text">
+    <h1>ShowAndTell</h1>
+    <p>把想法变成演示</p>
+  </div>
+</div>
+
+<div class="features">
+  <div class="feature"><span>🖊</span> 画笔</div>
+  <div class="feature"><span>🔴</span> 激光笔</div>
+  <div class="feature"><span>📷</span> 摄像框</div>
+  <div class="feature"><span>⏺</span> 录制</div>
+</div>
+
+<div class="url-section">
+  <div class="url-label">输入要演示的网页</div>
+  <input
+    class="url-input"
+    id="urlInput"
+    type="text"
+    placeholder="https://xiaolu-site.pages.dev"
+    autofocus
+  />
+  <button class="start-btn" id="startBtn">开始演示 →</button>
+  <div class="or-divider">或者</div>
+  <button class="current-btn" id="currentBtn">在当前网页使用</button>
+</div>
+
+<div class="footer">零登录 · 零账号 · 本地运行</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
