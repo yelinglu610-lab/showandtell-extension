@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "ShowAndTell",
+  "version": "2.0.0",
+  "description": "激光笔 · 摄像头 · 录制 · 任意网页",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "ShowAndTell — 点击激活"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  }
+}
