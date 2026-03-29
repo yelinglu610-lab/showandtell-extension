@@ -111,8 +111,7 @@
   bar.style.cssText="position:fixed;background:rgba(12,12,12,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 0 1px rgba(0,0,0,.5),0 16px 48px rgba(0,0,0,.6);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;user-select:none;cursor:grab;"
   document.body.append(bar)
 
-  // 初始化位置：先隐藏，读完状态再显示，避免跳动
-  bar.style.visibility = "hidden"
+  // 初始化位置
   requestAnimationFrame(()=>{
     const r = bar.getBoundingClientRect()
     barW = r.width
@@ -120,7 +119,6 @@
     barTop  = Math.round(window.innerHeight - r.height - 24)
     bar.style.left = barLeft + "px"
     bar.style.top  = barTop  + "px"
-    // visibility 在 GET_STATE 回调里恢复
   })
 
   bar.addEventListener("mousedown", e=>{
@@ -403,9 +401,7 @@
       recorder.start(); recOn=true; recSecs=0; timerEl.textContent="00:00"
       bRec.innerHTML=img("23f9",18)+"停止"; bRec._rec=true; bRec.style.background="rgba(255,59,48,.9)"
       timerEl.style.color="#FF3B30"
-      // 计时由 background 驱动（跨标签同步），本地也保留备用
       recTimer=setInterval(()=>{recSecs++;timerEl.textContent=fmt(recSecs)},1000)
-      chrome.runtime.sendMessage({ type: "REC_START" })
       ss.getVideoTracks()[0].onended=stopRec
     }catch(e){console.error(e)}
   }
@@ -414,7 +410,6 @@
     if(recorder?.state!=="inactive")recorder.stop()
     bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
     timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
-    chrome.runtime.sendMessage({ type: "REC_STOP" })
   }
   function exportPanel(blob){
     const p=document.createElement("div")
