@@ -51,11 +51,9 @@ function broadcastAll(msg) {
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 
   if (msg.type === "REC_START") {
-    const tabId = sender.tab.id
-    chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, async (streamId) => {
-      await ensureOffscreen()
+    ensureOffscreen().then(() => {
       chrome.runtime.sendMessage(
-        { target: "offscreen", type: "REC_START", streamId },
+        { target: "offscreen", type: "REC_START" },
         (res) => {
           if (res?.ok) {
             recOn = true; recSecs = 0
