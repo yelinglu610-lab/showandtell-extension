@@ -1,5 +1,6 @@
 let recSecs = 0
 let recOn = false
+const activatedTabs = new Set() // 只有用户主动点过图标的 tab
 
 async function inject(tabId) {
   try {
@@ -11,18 +12,23 @@ async function inject(tabId) {
   } catch (e) {}
 }
 
-chrome.action.onClicked.addListener((tab) => inject(tab.id))
+// 用户点图标：记录该 tab，注入
+chrome.action.onClicked.addListener((tab) => {
+  activatedTabs.add(tab.id)
+  inject(tab.id)
+})
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  const tab = await chrome.tabs.get(tabId).catch(() => null)
-  if (!tab?.url || tab.url.startsWith("chrome://")) return
+// 同一 tab 内页面跳转：只对激活过的 tab 重新注入
+chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+  if (info.status !== "complete") return
+  if (!activatedTabs.has(tabId)) return
+  if (!tab.url || tab.url.startsWith("chrome://")) return
   inject(tabId)
 })
 
-chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
-  if (info.status !== "complete") return
-  if (!tab.url || tab.url.startsWith("chrome://")) return
-  inject(tabId)
+// tab 关闭时清理
+chrome.tabs.onRemoved.addListener((tabId) => {
+  activatedTabs.delete(tabId)
 })
 
 async function ensureOffscreen() {
