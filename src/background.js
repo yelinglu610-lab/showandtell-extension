@@ -1,91 +1,85 @@
-// ── 录制状态（持久，跨页面跳转）──
-let rec = {
-  on: false,
-  secs: 0,
-  timer: null,
-  recorder: null,
-  chunks: [],
-  stream: null
-}
+let recSecs = 0
+let recOn = false
 
 async function inject(tabId) {
   try {
     await chrome.scripting.insertCSS({ target: { tabId }, files: ["src/content.css"] })
     await chrome.scripting.executeScript({ target: { tabId }, files: ["src/content.js"] })
-    // 注入后同步录制状态
-    if (rec.on) {
-      chrome.tabs.sendMessage(tabId, { type: "REC_SYNC", secs: rec.secs }).catch(()=>{})
+    if (recOn) {
+      chrome.tabs.sendMessage(tabId, { type: "REC_SYNC", secs: recSecs }).catch(() => {})
     }
   } catch (e) {}
 }
 
-// 点图标：注入
 chrome.action.onClicked.addListener((tab) => inject(tab.id))
 
-// 切换标签页：注入
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId).catch(() => null)
   if (!tab?.url || tab.url.startsWith("chrome://")) return
   inject(tabId)
 })
 
-// 同一标签页内跳转：页面加载完重新注入
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
   if (info.status !== "complete") return
   if (!tab.url || tab.url.startsWith("chrome://")) return
   inject(tabId)
 })
 
-// ── 消息处理 ──
+async function ensureOffscreen() {
+  const existing = await chrome.offscreen.hasDocument()
+  if (!existing) {
+    await chrome.offscreen.createDocument({
+      url: "offscreen.html",
+      reasons: ["USER_MEDIA"],
+      justification: "Recording audio/video"
+    })
+  }
+}
+
+function broadcastAll(msg) {
+  chrome.tabs.query({}, tabs => {
+    tabs.forEach(t => chrome.tabs.sendMessage(t.id, msg).catch(() => {}))
+  })
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 
-  // content 发起录制
   if (msg.type === "REC_START") {
     const tabId = sender.tab.id
-    chrome.tabCapture.capture({ audio: true, video: true }, (stream) => {
-      if (!stream) {
-        chrome.tabs.sendMessage(tabId, { type: "REC_ERROR", msg: "tabCapture 失败" }).catch(()=>{})
-        return
-      }
-      rec.stream = stream
-      rec.chunks = []
-      rec.recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" })
-      rec.recorder.ondataavailable = e => { if (e.data.size > 0) rec.chunks.push(e.data) }
-      rec.recorder.onstop = () => {
-        const blob = new Blob(rec.chunks, { type: "video/webm" })
-        const url = URL.createObjectURL(blob)
-        const secs = rec.secs
-        rec.on = false; rec.secs = 0
-        clearInterval(rec.timer); rec.timer = null
-        // 广播给所有 tab，哪个收到就弹下载
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: "REC_DONE", secs, url }).catch(()=>{}))
-        })
-      }
-      rec.recorder.start()
-      rec.on = true; rec.secs = 0
-      rec.timer = setInterval(() => {
-        rec.secs++
-        // 广播给所有 tab
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: "REC_TICK", secs: rec.secs }).catch(()=>{}))
-        })
-      }, 1000)
+    chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, async (streamId) => {
+      await ensureOffscreen()
+      chrome.runtime.sendMessage(
+        { target: "offscreen", type: "REC_START", streamId },
+        (res) => {
+          if (res?.ok) {
+            recOn = true; recSecs = 0
+          } else {
+            broadcastAll({ type: "REC_ERROR", msg: res?.err || "失败" })
+          }
+        }
+      )
     })
     return true
   }
 
-  // content 停止录制
   if (msg.type === "REC_STOP") {
-    if (rec.recorder && rec.recorder.state !== "inactive") {
-      rec.recorder.stop()
-      if (rec.stream) rec.stream.getTracks().forEach(t => t.stop())
-    }
+    chrome.runtime.sendMessage({ target: "offscreen", type: "REC_STOP" })
+    recOn = false
   }
 
-  // content 查询录制状态
   if (msg.type === "REC_STATUS") {
-    reply({ on: rec.on, secs: rec.secs })
+    reply({ on: recOn, secs: recSecs })
     return true
+  }
+
+  // 来自 offscreen
+  if (msg.type === "REC_TICK") {
+    recSecs = msg.secs
+    broadcastAll({ type: "REC_TICK", secs: msg.secs })
+  }
+
+  if (msg.type === "REC_DONE") {
+    recOn = false; recSecs = 0
+    broadcastAll({ type: "REC_DONE", url: msg.url, secs: msg.secs })
   }
 })
