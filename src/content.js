@@ -426,16 +426,34 @@
     p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:300px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
     p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
-    p.querySelector("#sat-dl").onclick=()=>{
-      p.querySelector("#sat-dl").textContent="下载中…"
-      // 大文件用 chrome.downloads.download + blob URL，避免 a.click() 对大文件失效
-      const u=URL.createObjectURL(blob)
-      const filename=`showandtell-${Date.now()}.webm`
-      chrome.runtime.sendMessage({type:"SAT_DOWNLOAD",blobUrl:u,filename}, ()=>{
-        // 延迟 revoke，给 background 足够时间读取
-        setTimeout(()=>URL.revokeObjectURL(u), 30000)
-      })
-      p.remove()
+    p.querySelector("#sat-dl").onclick=async ()=>{
+      const btn=p.querySelector("#sat-dl")
+      btn.textContent="下载中…"; btn.disabled=true
+      try {
+        // 优先用 File System Access API（大文件最稳，用户选路径）
+        if(window.showSaveFilePicker){
+          const fh=await window.showSaveFilePicker({
+            suggestedName:`showandtell-${Date.now()}.webm`,
+            types:[{description:"WebM Video",accept:{"video/webm":[".webm"]}}]
+          })
+          const w=await fh.createWritable()
+          await w.write(blob)
+          await w.close()
+        } else {
+          // 降级：直接下载
+          const u=URL.createObjectURL(blob)
+          const a=document.createElement("a")
+          a.href=u; a.download=`showandtell-${Date.now()}.webm`
+          a.style.cssText="position:fixed;top:-9999px"
+          document.body.appendChild(a)
+          a.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}))
+          setTimeout(()=>{ a.remove(); URL.revokeObjectURL(u) },10000)
+        }
+        p.remove()
+      } catch(e){
+        if(e.name!=="AbortError") btn.textContent="下载失败: "+e.message
+        else { btn.textContent="下载录制文件"; btn.disabled=false }
+      }
     }
     p.querySelector("#sat-cls").onclick=()=>p.remove()
   }
