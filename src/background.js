@@ -19,4 +19,18 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   inject(tabId)
 })
 
+// 下载录制文件（content.js 传来 blob URL，大文件用 downloads API 更稳）
+chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg.type === "SAT_DOWNLOAD") {
+    chrome.downloads.download({
+      url: msg.blobUrl,
+      filename: msg.filename,
+      saveAs: false
+    }, (downloadId) => {
+      reply({ ok: !!downloadId })
+    })
+    return true // 保持 reply 通道开放
+  }
+})
+
 
