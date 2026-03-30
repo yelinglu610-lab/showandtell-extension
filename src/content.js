@@ -484,13 +484,7 @@
       <div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成 ✅</div>
       <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${sizeMB} MB</div>
       <button id="sat-dl-webm" style="width:100%;height:48px;border-radius:14px;border:none;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">⬇️ 下载 WebM（快）</button>
-      <button id="sat-dl-mp4" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">🎬 转换并下载 MP4</button>
-      <div id="sat-progress" style="display:none;margin-bottom:10px;">
-        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;" id="sat-prog-txt">正在转换… 0%</div>
-        <div style="background:rgba(255,255,255,.1);border-radius:4px;height:4px;overflow:hidden;">
-          <div id="sat-prog-bar" style="height:100%;background:#FFD600;width:0%;transition:width .3s;"></div>
-        </div>
-      </div>
+      <button id="sat-dl-mp4" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">🎬 用 CloudConvert 转 MP4</button>
       <button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
 
@@ -507,35 +501,18 @@
       }
     }
 
-    // MP4 转换
+    // MP4：先下载 webm，再跳转 CloudConvert
     p.querySelector("#sat-dl-mp4").onclick=async ()=>{
       const btn=p.querySelector("#sat-dl-mp4")
-      const dlWebm=p.querySelector("#sat-dl-webm")
-      const prog=p.querySelector("#sat-progress")
-      const progTxt=p.querySelector("#sat-prog-txt")
-      const progBar=p.querySelector("#sat-prog-bar")
-      btn.disabled=true; dlWebm.disabled=true
-      btn.textContent="加载转换器…"
-      prog.style.display="block"
+      btn.textContent="下载中…"; btn.disabled=true
       try{
-        btn.textContent="转换中…"
-        const mp4=await convertToMp4(blob,(pct)=>{
-          if(pct===-1){ progTxt.textContent="加载 FFmpeg 中…"; return }
-          btn.textContent="转换中…"
-          progTxt.textContent=`正在转换… ${pct}%`
-          progBar.style.width=pct+"%"
-        })
-        progTxt.textContent="转换完成！保存文件…"
-        progBar.style.width="100%"
-        await saveFile(mp4,`showandtell-${ts}.mp4`,"video/mp4")
+        await saveFile(blob,`showandtell-${ts}.webm`,"video/webm")
+        // 下载完成后打开 CloudConvert
+        window.open("https://cloudconvert.com/webm-to-mp4","_blank")
         p.remove()
       }catch(e){
-        if(e.name==="AbortError"){
-          btn.textContent="🎬 转换并下载 MP4"; btn.disabled=false; dlWebm.disabled=false; prog.style.display="none"
-        } else {
-          progTxt.textContent="转换失败: "+e.message
-          btn.textContent="🎬 转换并下载 MP4"; btn.disabled=false; dlWebm.disabled=false
-        }
+        if(e.name==="AbortError"){ btn.textContent="🎬 用 CloudConvert 转 MP4"; btn.disabled=false }
+        else btn.textContent="失败: "+e.message
       }
     }
 
