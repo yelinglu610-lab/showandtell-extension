@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<!-- saved from url=(0117)https://aifin.xiaohongshu.com/rfphecda/aiworkbench/query/query_dashboard?dashboardId=550D7D8E04EC0ECCA861253E66B73C3F -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShowAndTell — 演示神器</title>
+<style>
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+ body {
+ background: #0a0a0a;
+ color: #fff;
+ font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+ min-height: 100vh;
+ overflow-x: hidden;
+ }
+ .hero {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
+ min-height: 100vh;
+ padding: 60px 24px;
+ text-align: center;
+ position: relative;
+ }
+ .hero::before {
+ content: "";
+ position: absolute;
+ inset: 0;
+ background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,214,0,.12) 0%, transparent 70%);
+ pointer-events: none;
+ }
+ .badge {
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ background: rgba(255,214,0,.12);
+ border: 1px solid rgba(255,214,0,.25);
+ border-radius: 20px;
+ padding: 5px 14px;
+ font-size: 12px;
+ font-weight: 600;
+ color: #FFD600;
+ letter-spacing: .5px;
+ margin-bottom: 32px;
+ }
+ .badge-dot {
+ width: 6px; height: 6px;
+ border-radius: 50%;
+ background: #FFD600;
+ animation: pulse 2s infinite;
+ }
+ @keyframes pulse {
+ 0%,100% { opacity: 1; }
+ 50% { opacity: .3; }
+ }
+ h1 {
+ font-size: clamp(48px, 8vw, 88px);
+ font-weight: 800;
+ letter-spacing: -2px;
+ line-height: 1.05;
+ margin-bottom: 20px;
+ }
+ h1 span { color: #FFD600; }
+ .subtitle {
+ font-size: clamp(16px, 2.5vw, 20px);
+ color: rgba(255,255,255,.45);
+ max-width: 520px;
+ line-height: 1.6;
+ margin-bottom: 48px;
+ }
+ .cta-group {
+ display: flex;
+ gap: 12px;
+ flex-wrap: wrap;
+ justify-content: center;
+ }
+ .btn-primary {
+ background: #FFD600;
+ color: #111;
+ border: none;
+ border-radius: 14px;
+ padding: 14px 28px;
+ font-size: 15px;
+ font-weight: 700;
+ cursor: pointer;
+ text-decoration: none;
+ display: inline-flex;
+ align-items: center;
+ gap: 8px;
+ transition: all .15s;
+ }
+ .btn-primary:hover { background: #ffe033; transform: translateY(-1px); }
+ .btn-secondary {
+ background: rgba(255,255,255,.07);
+ color: #fff;
+ border: 1px solid rgba(255,255,255,.12);
+ border-radius: 14px;
+ padding: 14px 28px;
+ font-size: 15px;
+ font-weight: 600;
+ cursor: pointer;
+ text-decoration: none;
+ display: inline-flex;
+ align-items: center;
+ gap: 8px;
+ transition: all .15s;
+ }
+ .btn-secondary:hover { background: rgba(255,255,255,.12); }
+ .toolbar-preview {
+ margin-top: 72px;
+ display: inline-flex;
+ align-items: center;
+ gap: 2px;
+ background: rgba(12,12,12,.93);
+ backdrop-filter: blur(24px);
+ border: 1px solid rgba(255,255,255,.1);
+ border-radius: 30px;
+ padding: 6px 10px;
+ box-shadow: 0 2px 0 1px rgba(0,0,0,.5), 0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(255,214,0,.08);
+ }
+ .tb-btn {
+ display: flex;
+ align-items: center;
+ gap: 7px;
+ height: 38px;
+ padding: 0 12px;
+ border-radius: 12px;
+ font-size: 13px;
+ font-weight: 600;
+ color: #fff;
+ white-space: nowrap;
+ cursor: default;
+ }
+ .tb-btn.active {
+ background: rgba(255,214,0,.18);
+ outline: 1.5px solid rgba(255,214,0,.55);
+ }
+ .tb-sep {
+ width: 1px; height: 20px;
+ background: rgba(255,255,255,.08);
+ margin: 0 3px;
+ flex-shrink: 0;
+ }
+ .tb-rec {
+ background: rgba(255,59,48,.15);
+ color: #fff;
+ border-radius: 12px;
+ height: 38px;
+ padding: 0 14px;
+ display: flex;
+ align-items: center;
+ gap: 7px;
+ font-size: 13px;
+ font-weight: 600;
+ }
+ .timer {
+ font-size: 12px;
+ font-weight: 700;
+ color: rgba(255,255,255,.5);
+ min-width: 32px;
+ text-align: center;
+ }
+ .features {
+ padding: 100px 24px;
+ max-width: 1100px;
+ margin: 0 auto;
+ }
+ .section-label {
+ font-size: 12px;
+ font-weight: 700;
+ color: #FFD600;
+ letter-spacing: 2px;
+ text-transform: uppercase;
+ text-align: center;
+ margin-bottom: 16px;
+ }
+ .section-title {
+ font-size: clamp(32px, 5vw, 52px);
+ font-weight: 800;
+ text-align: center;
+ letter-spacing: -1px;
+ margin-bottom: 64px;
+ line-height: 1.1;
+ }
+ .grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+ gap: 16px;
+ }
+ .card {
+ background: rgba(255,255,255,.04);
+ border: 1px solid rgba(255,255,255,.08);
+ border-radius: 20px;
+ padding: 32px;
+ transition: all .2s;
+ }
+ .card:hover {
+ background: rgba(255,255,255,.06);
+ border-color: rgba(255,214,0,.2);
+ transform: translateY(-2px);
+ }
+ .card-icon { font-size: 36px; margin-bottom: 16px; display: block; }
+ .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+ .card p { font-size: 14px; color: rgba(255,255,255,.45); line-height: 1.6; }
+ .how { padding: 100px 24px; background: rgba(255,255,255,.02); }
+ .steps { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 0; }
+ .step { display: flex; gap: 24px; align-items: flex-start; padding: 32px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+ .step:last-child { border-bottom: none; }
+ .step-num { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,214,0,.12); border: 1px solid rgba(255,214,0,.25); color: #FFD600; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+ .step-content h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+ .step-content p { font-size: 14px; color: rgba(255,255,255,.45); line-height: 1.6; }
+ .shortcuts { padding: 80px 24px; max-width: 700px; margin: 0 auto; text-align: center; }
+ .keys { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
+ .key-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+ .key { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); border-bottom: 3px solid rgba(255,255,255,.1); border-radius: 10px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; }
+ .key-label { font-size: 11px; color: rgba(255,255,255,.35); font-weight: 500; }
+ footer { padding: 40px 24px; text-align: center; border-top: 1px solid rgba(255,255,255,.06); color: rgba(255,255,255,.2); font-size: 13px; }
+ footer a { color: rgba(255,255,255,.35); text-decoration: none; }
+ footer a:hover { color: #FFD600; }
+</style>
+</head>
+<body>
+<section class="hero">
+ <div class="badge">
+ <div class="badge-dot"></div>
+ Designed by 小鹿 🦌
+ </div>
+ <h1>演示，<span>更专业</span></h1>
+ <p class="subtitle">一个 Chrome 插件，给你的演示加上激光笔、摄像头、录制。点击图标，秒级激活。</p>
+ <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:6px 16px;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:16px;">
+ <span style="width:6px;height:6px;border-radius:50%;background:#34C759;display:inline-block;"></span>
+ 已上线 · 已部署 · 完成度 100%
+ </div>
+ <div class="cta-group">
+ <a href="https://github.com/yelinglu610-lab/showandtell-extension" class="btn-primary" target="_blank">⬇️ 下载插件</a>
+ <a href="https://github.com/yelinglu610-lab/showandtell-extension" class="btn-secondary" target="_blank">★ GitHub</a>
+ </div>
+ <div class="toolbar-preview">
+ <div class="tb-btn">📷 摄像头</div>
+ <div class="tb-btn">···</div>
+ <div class="tb-btn">🎙</div>
+ <div class="tb-sep"></div>
+ <div class="tb-btn active">🖱 鼠标</div>
+ <div class="tb-btn">🔦 激光笔</div>
+ <div class="tb-btn">🎨 颜色</div>
+ <div class="tb-sep"></div>
+ <div class="tb-rec">🔴 录制</div>
+ <div class="timer">00:00</div>
+ <div class="tb-sep"></div>
+ <div class="tb-btn" style="padding:0 8px;opacity:.5;">∧</div>
+ <div class="tb-btn" style="padding:0 8px;opacity:.5;">✕</div>
+ </div>
+</section>
+<section class="features">
+ <h2 class="section-title">你需要的，全在这里</h2>
+ <div class="grid">
+ <div class="card"><span class="card-icon">🔦</span><h3>激光笔</h3><p>切换到激光模式，在页面上画出高亮轨迹，700ms 自动渐隐。支持 8 种颜色和自定义粗细。</p></div>
+ <div class="card"><span class="card-icon">📷</span><h3>摄像头叠加</h3><p>开启摄像头，人脸悬浮在页面上。边缘拖动、滚轮缩放、形状切换（圆角/圆形/方形）。</p></div>
+ <div class="card"><span class="card-icon">🔴</span><h3>一键录制</h3><p>录制屏幕 + 麦克风，包含激光轨迹和摄像头画面。停止后直接下载 webm 文件。</p></div>
+ <div class="card"><span class="card-icon">🖱</span><h3>鼠标/激光切换</h3><p>随时在鼠标模式（正常操作页面）和激光笔模式之间切换，快捷键 L / M。</p></div>
+ <div class="card"><span class="card-icon">🎙</span><h3>麦克风控制</h3><p>独立麦克风开关，图标灰色 = 关闭，黄色高亮 = 开启，状态一目了然。</p></div>
+ <div class="card"><span class="card-icon">∧</span><h3>随手收起</h3><p>点收起按钮，工具栏滑到右边缘变成小标签，不影响页面。点一下弹回来。</p></div>
+ </div>
+</section>
+<section class="how">
+ <div class="section-label" style="text-align:center;">使用方法</div>
+ <h2 class="section-title" style="text-align:center;max-width:600px;margin:0 auto 64px;">三步开始演示</h2>
+ <div class="steps">
+ <div class="step"><div class="step-num">1</div><div class="step-content"><h3>安装插件</h3><p>从 GitHub 下载，打开 chrome://extensions/ 开启开发者模式，加载已解压的扩展程序。</p></div></div>
+ <div class="step"><div class="step-num">2</div><div class="step-content"><h3>点击图标激活</h3><p>打开任意网页，点击 Chrome 工具栏的 ShowAndTell 图标，页面底部出现悬浮工具栏。</p></div></div>
+ <div class="step"><div class="step-num">3</div><div class="step-content"><h3>开始演示</h3><p>开摄像头、打开激光笔、点录制。结束后点停止，录制文件自动下载到本地。</p></div></div>
+ </div>
+</section>
+<section class="shortcuts">
+ <div class="section-label">快捷键</div>
+ <h2 class="section-title">手不离键盘</h2>
+ <div class="keys">
+ <div class="key-item"><div class="key">L</div><div class="key-label">激光笔</div></div>
+ <div class="key-item"><div class="key">M</div><div class="key-label">鼠标</div></div>
+ <div class="key-item"><div class="key">C</div><div class="key-label">摄像头</div></div>
+ <div class="key-item"><div class="key">R</div><div class="key-label">录制</div></div>
+ <div class="key-item"><div class="key" style="font-size:11px;">Esc</div><div class="key-label">关闭</div></div>
+ </div>
+</section>
+<footer>
+ <p style="color:rgba(255,214,0,.4);font-weight:500;">ShowAndTell · <a href="https://github.com/yelinglu610-lab/showandtell-extension" target="_blank" style="color:rgba(255,214,0,.4);">GitHub</a> · MIT License</p>
+ <p style="margin-top:8px;color:rgba(255,214,0,.75);font-weight:600;">© 2026 ShowAndTell · Made by Yelinglu</p>
+</footer>
+</body></html>
