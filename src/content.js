@@ -442,32 +442,57 @@
     }
   }
 
-  // ── FFmpeg 转 MP4 ──
+  // ── FFmpeg 转 MP4（Worker 方式，绕过页面 CSP）──
   async function convertToMp4(webmBlob, progressCb){
-    const FFMPEG_BASE="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd"
     const CORE_BASE="https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd"
-    // 动态加载 FFmpeg
-    if(!window._ffmpegLoaded){
-      await new Promise((res,rej)=>{
-        const s=document.createElement("script")
-        s.src=`${FFMPEG_BASE}/ffmpeg.js`; s.onload=res; s.onerror=rej
-        document.head.appendChild(s)
-      })
-      window._ffmpegLoaded=true
+    const FFMPEG_JS="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"
+
+    // 用 fetch 拿 ffmpeg.js 源码，再塞进 Worker（绕过页面 CSP）
+    if(!window._ffmpegSrc){
+      progressCb&&progressCb(-1) // -1 = 加载中
+      const r=await fetch(FFMPEG_JS)
+      if(!r.ok) throw new Error("FFmpeg 脚本加载失败 "+r.status)
+      window._ffmpegSrc=await r.text()
     }
-    const {FFmpeg}=window.FFmpegWASM||window
-    const ffmpeg=new FFmpeg()
-    ffmpeg.on("progress",({progress})=>progressCb&&progressCb(Math.round(progress*100)))
-    await ffmpeg.load({
-      coreURL:`${CORE_BASE}/ffmpeg-core.js`,
-      wasmURL:`${CORE_BASE}/ffmpeg-core.wasm`,
+
+    return new Promise((resolve, reject)=>{
+      const workerSrc=`
+${window._ffmpegSrc}
+const CORE_BASE="${CORE_BASE}";
+self.onmessage=async(e)=>{
+  const {buf}=e.data;
+  try{
+    const {FFmpeg}=FFmpegWASM;
+    const ffmpeg=new FFmpeg();
+    ffmpeg.on("progress",({progress})=>self.postMessage({type:"progress",pct:Math.round(progress*100)}));
+    await ffmpeg.load({coreURL:CORE_BASE+"/ffmpeg-core.js",wasmURL:CORE_BASE+"/ffmpeg-core.wasm"});
+    await ffmpeg.writeFile("in.webm",new Uint8Array(buf));
+    await ffmpeg.exec(["-i","in.webm","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-movflags","+faststart","out.mp4"]);
+    const out=await ffmpeg.readFile("out.mp4");
+    self.postMessage({type:"done",buf:out.buffer},[out.buffer]);
+  }catch(err){
+    self.postMessage({type:"error",msg:err.message});
+  }
+};
+`
+      const blob=new Blob([workerSrc],{type:"application/javascript"})
+      const worker=new Worker(URL.createObjectURL(blob))
+      webmBlob.arrayBuffer().then(buf=>{
+        worker.postMessage({buf},[buf])
+      })
+      worker.onmessage=(e)=>{
+        const {type,pct,buf,msg}=e.data
+        if(type==="progress"){ progressCb&&progressCb(pct) }
+        else if(type==="done"){
+          worker.terminate()
+          resolve(new Blob([buf],{type:"video/mp4"}))
+        } else if(type==="error"){
+          worker.terminate()
+          reject(new Error(msg))
+        }
+      }
+      worker.onerror=(e)=>{ worker.terminate(); reject(new Error(e.message)) }
     })
-    const inName="input.webm", outName="output.mp4"
-    const buf=await webmBlob.arrayBuffer()
-    await ffmpeg.writeFile(inName, new Uint8Array(buf))
-    await ffmpeg.exec(["-i",inName,"-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-movflags","+faststart",outName])
-    const data=await ffmpeg.readFile(outName)
-    return new Blob([data.buffer],{type:"video/mp4"})
   }
 
   function exportPanel(blob){
@@ -515,6 +540,8 @@
       try{
         btn.textContent="转换中…"
         const mp4=await convertToMp4(blob,(pct)=>{
+          if(pct===-1){ progTxt.textContent="加载 FFmpeg 中…"; return }
+          btn.textContent="转换中…"
           progTxt.textContent=`正在转换… ${pct}%`
           progBar.style.width=pct+"%"
         })
