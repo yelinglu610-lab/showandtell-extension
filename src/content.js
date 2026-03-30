@@ -392,7 +392,9 @@
       const ss=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:true})
       let ms=null; try{ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}catch{}
       const tracks=[...ss.getTracks()]; if(ms)tracks.push(...ms.getAudioTracks())
-      chunks=[]; recorder=new MediaRecorder(new MediaStream(tracks),{mimeType:"video/webm;codecs=vp9"})
+      // 优先 vp9，降级到默认（保证兼容性）
+      const mimeType=MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm"
+      chunks=[]; recorder=new MediaRecorder(new MediaStream(tracks),{mimeType})
       recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)}
       recorder.onstop=()=>{
         const blob=new Blob(chunks,{type:"video/webm"})
@@ -404,7 +406,14 @@
       timerEl.style.color="#FF3B30"
       recTimer=setInterval(()=>{recSecs++;timerEl.textContent=fmt(recSecs)},1000)
       ss.getVideoTracks()[0].onended=stopRec
-    }catch(e){console.error(e)}
+    }catch(e){
+      console.error("SAT startRec error:",e)
+      // 用户可见提示
+      const t=document.createElement("div")
+      t.style.cssText="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(255,59,48,.95);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:2147483647;pointer-events:none;"
+      t.textContent="录制启动失败："+e.message
+      document.body.append(t); setTimeout(()=>t.remove(),4000)
+    }
   }
   function stopRec(){
     if(!recOn)return; recOn=false; clearInterval(recTimer)
@@ -418,14 +427,14 @@
     p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
     p.querySelector("#sat-dl").onclick=()=>{
-      p.querySelector("#sat-dl").textContent="下载中…"
-      const reader=new FileReader()
-      reader.onloadend=()=>{
-        // 通过 background 的 chrome.downloads.download 下载，绕过 content script 限制
-        chrome.runtime.sendMessage({type:"SAT_DOWNLOAD",dataUrl:reader.result,filename:`showandtell-${Date.now()}.webm`})
-        p.remove()
-      }
-      reader.readAsDataURL(blob)
+      const u=URL.createObjectURL(blob)
+      const a=document.createElement("a")
+      a.href=u; a.download=`showandtell-${Date.now()}.webm`
+      a.style.display="none"
+      document.body.appendChild(a)
+      a.click()
+      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(u) }, 5000)
+      p.remove()
     }
     p.querySelector("#sat-cls").onclick=()=>p.remove()
   }

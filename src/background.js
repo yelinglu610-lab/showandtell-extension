@@ -19,13 +19,4 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   inject(tabId)
 })
 
-// content.js 请求下载（绕过 content script 下载限制）
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "SAT_DOWNLOAD") {
-    chrome.downloads.download({
-      url: msg.dataUrl,
-      filename: msg.filename,
-      saveAs: false
-    })
-  }
-})
+
