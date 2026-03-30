@@ -418,9 +418,14 @@
     p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
     p.querySelector("#sat-dl").onclick=()=>{
-      const u=URL.createObjectURL(blob),a=document.createElement("a")
-      a.href=u;a.download=`showandtell-${Date.now()}.webm`;document.body.append(a);a.click();a.remove()
-      setTimeout(()=>URL.revokeObjectURL(u),3e3); p.remove()
+      p.querySelector("#sat-dl").textContent="下载中…"
+      const reader=new FileReader()
+      reader.onloadend=()=>{
+        // 通过 background 的 chrome.downloads.download 下载，绕过 content script 限制
+        chrome.runtime.sendMessage({type:"SAT_DOWNLOAD",dataUrl:reader.result,filename:`showandtell-${Date.now()}.webm`})
+        p.remove()
+      }
+      reader.readAsDataURL(blob)
     }
     p.querySelector("#sat-cls").onclick=()=>p.remove()
   }
