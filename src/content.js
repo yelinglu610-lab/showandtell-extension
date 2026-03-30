@@ -421,40 +421,117 @@
     bRec.innerHTML=img("1f534",18)+"录制"; bRec._rec=false; bRec.style.background="rgba(255,59,48,.15)"
     timerEl.style.color="rgba(255,255,255,.7)"; timerEl.textContent="00:00"
   }
+  // ── 通用下载（showSaveFilePicker 优先，降级 a.click）──
+  async function saveFile(blob, filename, mimeType){
+    if(window.showSaveFilePicker){
+      const ext=filename.split(".").pop()
+      const fh=await window.showSaveFilePicker({
+        suggestedName: filename,
+        types:[{description: mimeType, accept:{[mimeType]:["."+ext]}}]
+      })
+      const w=await fh.createWritable()
+      await w.write(blob)
+      await w.close()
+    } else {
+      const u=URL.createObjectURL(blob)
+      const a=document.createElement("a")
+      a.href=u; a.download=filename; a.style.cssText="position:fixed;top:-9999px"
+      document.body.appendChild(a)
+      a.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}))
+      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(u) },15000)
+    }
+  }
+
+  // ── FFmpeg 转 MP4 ──
+  async function convertToMp4(webmBlob, progressCb){
+    const FFMPEG_BASE="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd"
+    const CORE_BASE="https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd"
+    // 动态加载 FFmpeg
+    if(!window._ffmpegLoaded){
+      await new Promise((res,rej)=>{
+        const s=document.createElement("script")
+        s.src=`${FFMPEG_BASE}/ffmpeg.js`; s.onload=res; s.onerror=rej
+        document.head.appendChild(s)
+      })
+      window._ffmpegLoaded=true
+    }
+    const {FFmpeg}=window.FFmpegWASM||window
+    const ffmpeg=new FFmpeg()
+    ffmpeg.on("progress",({progress})=>progressCb&&progressCb(Math.round(progress*100)))
+    await ffmpeg.load({
+      coreURL:`${CORE_BASE}/ffmpeg-core.js`,
+      wasmURL:`${CORE_BASE}/ffmpeg-core.wasm`,
+    })
+    const inName="input.webm", outName="output.mp4"
+    const buf=await webmBlob.arrayBuffer()
+    await ffmpeg.writeFile(inName, new Uint8Array(buf))
+    await ffmpeg.exec(["-i",inName,"-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-movflags","+faststart",outName])
+    const data=await ffmpeg.readFile(outName)
+    return new Blob([data.buffer],{type:"video/mp4"})
+  }
+
   function exportPanel(blob){
+    const ts=Date.now()
+    const sizeMB=(blob.size/1024/1024).toFixed(1)
     const p=document.createElement("div")
-    p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:300px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
-    p.innerHTML=`<div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成</div><div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${(blob.size/1024/1024).toFixed(1)} MB</div><button id="sat-dl" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">下载录制文件</button><button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
+    p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(12,12,12,.97);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:320px;box-shadow:0 30px 80px rgba(0,0,0,.8);z-index:2147483647;pointer-events:all;font-family:-apple-system,sans-serif;color:#fff;"
+    p.innerHTML=`
+      <div style="font-size:20px;font-weight:700;margin-bottom:4px;">录制完成 ✅</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:24px;">${fmt(recSecs)} · ${sizeMB} MB</div>
+      <button id="sat-dl-webm" style="width:100%;height:48px;border-radius:14px;border:none;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">⬇️ 下载 WebM（快）</button>
+      <button id="sat-dl-mp4" style="width:100%;height:48px;border-radius:14px;border:none;background:#FFD600;color:#111;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">🎬 转换并下载 MP4</button>
+      <div id="sat-progress" style="display:none;margin-bottom:10px;">
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;" id="sat-prog-txt">正在转换… 0%</div>
+        <div style="background:rgba(255,255,255,.1);border-radius:4px;height:4px;overflow:hidden;">
+          <div id="sat-prog-bar" style="height:100%;background:#FFD600;width:0%;transition:width .3s;"></div>
+        </div>
+      </div>
+      <button id="sat-cls" style="width:100%;height:36px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,.25);font-size:13px;cursor:pointer;">关闭</button>`
     document.body.append(p)
-    p.querySelector("#sat-dl").onclick=async ()=>{
-      const btn=p.querySelector("#sat-dl")
+
+    // WebM 下载
+    p.querySelector("#sat-dl-webm").onclick=async ()=>{
+      const btn=p.querySelector("#sat-dl-webm")
       btn.textContent="下载中…"; btn.disabled=true
-      try {
-        // 优先用 File System Access API（大文件最稳，用户选路径）
-        if(window.showSaveFilePicker){
-          const fh=await window.showSaveFilePicker({
-            suggestedName:`showandtell-${Date.now()}.webm`,
-            types:[{description:"WebM Video",accept:{"video/webm":[".webm"]}}]
-          })
-          const w=await fh.createWritable()
-          await w.write(blob)
-          await w.close()
-        } else {
-          // 降级：直接下载
-          const u=URL.createObjectURL(blob)
-          const a=document.createElement("a")
-          a.href=u; a.download=`showandtell-${Date.now()}.webm`
-          a.style.cssText="position:fixed;top:-9999px"
-          document.body.appendChild(a)
-          a.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}))
-          setTimeout(()=>{ a.remove(); URL.revokeObjectURL(u) },10000)
-        }
+      try{
+        await saveFile(blob,`showandtell-${ts}.webm`,"video/webm")
         p.remove()
-      } catch(e){
-        if(e.name!=="AbortError") btn.textContent="下载失败: "+e.message
-        else { btn.textContent="下载录制文件"; btn.disabled=false }
+      }catch(e){
+        if(e.name==="AbortError"){ btn.textContent="⬇️ 下载 WebM（快）"; btn.disabled=false }
+        else btn.textContent="失败: "+e.message
       }
     }
+
+    // MP4 转换
+    p.querySelector("#sat-dl-mp4").onclick=async ()=>{
+      const btn=p.querySelector("#sat-dl-mp4")
+      const dlWebm=p.querySelector("#sat-dl-webm")
+      const prog=p.querySelector("#sat-progress")
+      const progTxt=p.querySelector("#sat-prog-txt")
+      const progBar=p.querySelector("#sat-prog-bar")
+      btn.disabled=true; dlWebm.disabled=true
+      btn.textContent="加载转换器…"
+      prog.style.display="block"
+      try{
+        btn.textContent="转换中…"
+        const mp4=await convertToMp4(blob,(pct)=>{
+          progTxt.textContent=`正在转换… ${pct}%`
+          progBar.style.width=pct+"%"
+        })
+        progTxt.textContent="转换完成！保存文件…"
+        progBar.style.width="100%"
+        await saveFile(mp4,`showandtell-${ts}.mp4`,"video/mp4")
+        p.remove()
+      }catch(e){
+        if(e.name==="AbortError"){
+          btn.textContent="🎬 转换并下载 MP4"; btn.disabled=false; dlWebm.disabled=false; prog.style.display="none"
+        } else {
+          progTxt.textContent="转换失败: "+e.message
+          btn.textContent="🎬 转换并下载 MP4"; btn.disabled=false; dlWebm.disabled=false
+        }
+      }
+    }
+
     p.querySelector("#sat-cls").onclick=()=>p.remove()
   }
 
